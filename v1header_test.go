@@ -42,3 +42,40 @@ func Test_AFroundtrip(t *testing.T) {
 		}
 	}
 }
+
+func Test_enc_roundtrip(t *testing.T) {
+	type testCases struct {
+		cipher, mode string
+		keysize      int
+		datasize     int
+	}
+	for _, testCase := range []testCases{
+		{"aes", "ecb", 16, 16},
+		{"aes", "ecb", 16, 256},
+		{"aes", "ecb", 16, 2048},
+		{"aes", "ecb", 16, 65536},
+		{"aes", "ecb", 32, 16},
+		{"aes", "ecb", 32, 256},
+		{"aes", "ecb", 32, 2048},
+		{"aes", "ecb", 32, 65536},
+		{"aes", "xts-plain64", 64, 256},
+		{"aes", "xts-plain64", 64, 2048},
+		{"aes", "xts-plain64", 64, 65536},
+	} {
+		t.Run(fmt.Sprintf("%s-%s-%d:%d", testCase.cipher, testCase.mode, testCase.keysize, testCase.datasize), func(t *testing.T) {
+			key := make([]byte, testCase.keysize)
+			n, err := rand.Read(key)
+			require.Nil(t, err, "unexpected error reading random data")
+			require.Equalf(t, len(key), n, "short read while reading random data: %d < %d", n, len(key))
+			data := make([]byte, testCase.datasize)
+			for i := 0; i < len(data); i++ {
+				data[i] = uint8(i & 0xff)
+			}
+			encrypted, err := v1encrypt(testCase.cipher, testCase.mode, key, data)
+			require.Nil(t, err, "unexpected error encrypting data")
+			decrypted, err := v1decrypt(testCase.cipher, testCase.mode, key, encrypted)
+			require.Nil(t, err, "unexpected error decrypting data")
+			assert.Equal(t, data, decrypted, "data was altered somewhere")
+		})
+	}
+}

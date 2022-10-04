@@ -14,7 +14,6 @@ import (
 	"os"
 	"syscall"
 
-	"golang.org/x/crypto/cast5"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/xts"
@@ -89,27 +88,27 @@ const (
 )
 
 var (
-	v1CipherNames = map[string]v1NewBlockCipherFunction{
-		"aes":     aes.NewCipher,
-		"twofish": nil,
-		"serpent": nil,
-		"cast5":   func(key []byte) (cipher.Block, error) { return cast5.NewCipher(key) },
-		"cast6":   nil,
+	v1CipherNames = map[string]struct{}{
+		"aes":     {},
+		"twofish": {},
+		"serpent": {},
+		"cast5":   {},
+		"cast6":   {},
 	}
-	v1Modes = map[string]v1NewBlockCipherModeFunction{
-		"ecb":                 nil,
-		"cbc-plain":           nil,
-		"cbc-essiv:sha1":      nil,
-		"cbc-essiv:sha256":    nil,
-		"cbc-essiv:sha512":    nil,
-		"cbc-essiv:ripemd160": nil,
-		"xts-plain64":         nil,
+	v1Modes = map[string]struct{}{
+		"ecb":                 {},
+		"cbc-plain":           {},
+		"cbc-essiv:sha1":      {},
+		"cbc-essiv:sha256":    {},
+		"cbc-essiv:sha512":    {},
+		"cbc-essiv:ripemd160": {},
+		"xts-plain64":         {},
 	}
-	v1HashSpecs = map[string]v1NewHashFunction{
-		"sha1":      sha1.New,
-		"sha256":    sha256.New,
-		"sha512":    sha512.New,
-		"ripemd160": ripemd160.New,
+	v1HashSpecs = map[string]struct{}{
+		"sha1":      {},
+		"sha256":    {},
+		"sha512":    {},
+		"ripemd160": {},
 	}
 )
 
@@ -446,9 +445,9 @@ func (h V1Header) Check(password string, f *os.File) ([]byte, error) {
 	return nil, errors.New("decryption error: incorrect password")
 }
 
-func v1decrypt(cipherName, cipherMode string, key []byte, striped []byte) ([]byte, error) {
+func v1decrypt(cipherName, cipherMode string, key []byte, ciphertext []byte) ([]byte, error) {
 	var err error
-	decrypted := make([]byte, len(striped))
+	plaintext := make([]byte, len(ciphertext))
 	switch cipherName {
 	case "aes":
 		switch cipherMode {
@@ -457,24 +456,24 @@ func v1decrypt(cipherName, cipherMode string, key []byte, striped []byte) ([]byt
 			if err != nil {
 				return nil, fmt.Errorf("initializing decryption: %w", err)
 			}
-			for processed := 0; processed < len(striped); processed += cipher.BlockSize() {
+			for processed := 0; processed < len(ciphertext); processed += cipher.BlockSize() {
 				blockLeft := V1SectorSize
-				if processed+blockLeft > len(striped) {
-					blockLeft = len(striped) - processed
+				if processed+blockLeft > len(ciphertext) {
+					blockLeft = len(ciphertext) - processed
 				}
-				cipher.Decrypt(decrypted[processed:processed+blockLeft], striped[processed:processed+blockLeft])
+				cipher.Decrypt(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
 			}
 		case "xts-plain64":
 			cipher, err := xts.NewCipher(aes.NewCipher, key)
 			if err != nil {
 				return nil, fmt.Errorf("initializing decryption: %w", err)
 			}
-			for processed := 0; processed < len(striped); processed += V1SectorSize {
+			for processed := 0; processed < len(ciphertext); processed += V1SectorSize {
 				blockLeft := V1SectorSize
-				if processed+blockLeft > len(striped) {
-					blockLeft = len(striped) - processed
+				if processed+blockLeft > len(ciphertext) {
+					blockLeft = len(ciphertext) - processed
 				}
-				cipher.Decrypt(decrypted[processed:processed+blockLeft], striped[processed:processed+blockLeft], uint64(processed/V1SectorSize))
+				cipher.Decrypt(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft], uint64(processed/V1SectorSize))
 			}
 		default:
 			return nil, fmt.Errorf("unsupported cipher mode %s", cipherMode)
@@ -485,7 +484,49 @@ func v1decrypt(cipherName, cipherMode string, key []byte, striped []byte) ([]byt
 	if err != nil {
 		return nil, fmt.Errorf("cipher error: %w", err)
 	}
-	return decrypted, nil
+	return plaintext, nil
+}
+
+func v1encrypt(cipherName, cipherMode string, key []byte, plaintext []byte) ([]byte, error) {
+	var err error
+	ciphertext := make([]byte, len(plaintext))
+	switch cipherName {
+	case "aes":
+		switch cipherMode {
+		case "ecb":
+			cipher, err := aes.NewCipher(key)
+			if err != nil {
+				return nil, fmt.Errorf("initializing decryption: %w", err)
+			}
+			for processed := 0; processed < len(plaintext); processed += cipher.BlockSize() {
+				blockLeft := V1SectorSize
+				if processed+blockLeft > len(plaintext) {
+					blockLeft = len(plaintext) - processed
+				}
+				cipher.Encrypt(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft])
+			}
+		case "xts-plain64":
+			cipher, err := xts.NewCipher(aes.NewCipher, key)
+			if err != nil {
+				return nil, fmt.Errorf("initializing decryption: %w", err)
+			}
+			for processed := 0; processed < len(plaintext); processed += V1SectorSize {
+				blockLeft := V1SectorSize
+				if processed+blockLeft > len(plaintext) {
+					blockLeft = len(plaintext) - processed
+				}
+				cipher.Encrypt(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft], uint64(processed/V1SectorSize))
+			}
+		default:
+			return nil, fmt.Errorf("unsupported cipher mode %s", cipherMode)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported cipher %s", cipherName)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("cipher error: %w", err)
+	}
+	return ciphertext, nil
 }
 
 func diffuse(key []byte, h hash.Hash) []byte {
