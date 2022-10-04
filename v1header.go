@@ -524,23 +524,24 @@ func afMerge(splitKey []byte, h hash.Hash, keysize int, stripes int) ([]byte, er
 }
 
 func afSplit(key []byte, h hash.Hash, stripes int) ([]byte, error) {
-	d := make([]byte, len(key)*stripes)
-	s := make([]byte, len(key))
-	for i := 0; i < stripes; i++ {
-		n, err := rand.Read(s)
-		if err != nil {
-			return nil, err
-		}
-		if n != len(s) {
-			return nil, fmt.Errorf("short read when attempting to read random data: %d < %d", n, len(s))
-		}
-		if i > 0 {
-			for j := 0; j < len(key); j++ {
-				s[j] = s[j] ^ d[(i-1)*len(key)+j]
-			}
-		}
-		s = diffuse(s, h)
-		copy(d[i*len(key):], s)
+	keysize := len(key)
+	s := make([]byte, keysize*stripes)
+	d := make([]byte, keysize)
+	n, err := rand.Read(s[0 : (keysize-1)*stripes])
+	if err != nil {
+		return nil, err
 	}
-	return d, nil
+	if n != (keysize-1)*stripes {
+		return nil, fmt.Errorf("short read when attempting to read random data: %d < %d", n, (keysize-1)*stripes)
+	}
+	for i := 0; i < stripes-1; i++ {
+		for j := 0; j < keysize; j++ {
+			d[j] = d[j] ^ s[i*keysize+j]
+		}
+		d = diffuse(d, h)
+	}
+	for j := 0; j < keysize; j++ {
+		s[(stripes-1)*keysize+j] = d[j] ^ key[j]
+	}
+	return s, nil
 }
