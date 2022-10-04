@@ -70,7 +70,7 @@ const (
 	v1KeySlotIterationsStart         = v1KeySlotActiveStart + v1KeySlotActiveLength
 	v1KeySlotIterationsLength        = 4
 	v1KeySlotSaltStart               = v1KeySlotIterationsStart + v1KeySlotIterationsLength
-	v1KeySlotSaltLength              = 32
+	v1KeySlotSaltLength              = V1SaltSize
 	v1KeySlotKeyMaterialOffsetStart  = v1KeySlotSaltStart + v1KeySlotSaltLength
 	v1KeySlotKeyMaterialOffsetLength = 4
 	v1KeySlotStripesStart            = v1KeySlotKeyMaterialOffsetStart + v1KeySlotKeyMaterialOffsetLength
@@ -361,7 +361,7 @@ func (s *V1KeySlot) SetIterations(iterations uint32) {
 	s.writeu4(v1KeySlotIterationsStart, iterations)
 }
 
-func (s V1KeySlot) MKDigestSalt() []uint8 {
+func (s V1KeySlot) KeySlotSalt() []uint8 {
 	return dupInt8(s[v1KeySlotSaltStart : v1KeySlotSaltStart+v1KeySlotSaltLength])
 }
 
@@ -415,7 +415,7 @@ func (h V1Header) Check(password string, f *os.File) ([]byte, error) {
 		}
 		activeKeys++
 
-		passwordDerived := pbkdf2.Key([]byte(password), keyslot.MKDigestSalt(), int(keyslot.Iterations()), int(h.KeyBytes()), hasher)
+		passwordDerived := pbkdf2.Key([]byte(password), keyslot.KeySlotSalt(), int(keyslot.Iterations()), int(h.KeyBytes()), hasher)
 		striped := make([]byte, h.KeyBytes()*keyslot.Stripes())
 		n, err := f.ReadAt(striped, int64(keyslot.KeyMaterialOffset())*V1SectorSize)
 		if err != nil {

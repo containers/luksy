@@ -62,7 +62,7 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 			}
 			if active {
 				fmt.Fprintf(tw, "Slot %d\titerations\t%d\n", i, ks.Iterations())
-				fmt.Fprintf(tw, "\tsalt\t%q\n", ks.MKDigestSalt())
+				fmt.Fprintf(tw, "\tsalt\t%q\n", ks.KeySlotSalt())
 				fmt.Fprintf(tw, "\tkey material offset sectors\t%d\n", ks.KeyMaterialOffset())
 				fmt.Fprintf(tw, "\tstripes\t%d\n", ks.Stripes())
 			}
