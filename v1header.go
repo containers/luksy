@@ -430,14 +430,14 @@ func (h V1Header) Check(password string, f *os.File) ([]byte, error) {
 			fmt.Fprintf(os.Stderr, "error attempting to decrypt main key: %v\n", err)
 			continue
 		}
-		unsplit, err := afmerge(splitKey, hasher(), int(h.KeyBytes()), int(keyslot.Stripes()))
+		mkCandidate, err := afMerge(splitKey, hasher(), int(h.KeyBytes()), int(keyslot.Stripes()))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error attempting to compute main key: %v\n", err)
 			continue
 		}
-		mkcandidateDerived := pbkdf2.Key(unsplit, h.MKDigestSalt(), int(h.MKDigestIter()), V1DigestSize, hasher)
+		mkcandidateDerived := pbkdf2.Key(mkCandidate, h.MKDigestSalt(), int(h.MKDigestIter()), V1DigestSize, hasher)
 		if bytes.Equal(mkcandidateDerived, h.MKDigest()) {
-			return unsplit, nil
+			return mkCandidate, nil
 		}
 	}
 	if activeKeys == 0 {
@@ -506,7 +506,7 @@ func diffuse(key []byte, h hash.Hash) []byte {
 	return sum
 }
 
-func afmerge(splitKey []byte, h hash.Hash, keysize int, stripes int) ([]byte, error) {
+func afMerge(splitKey []byte, h hash.Hash, keysize int, stripes int) ([]byte, error) {
 	if len(splitKey) != keysize*stripes {
 		return nil, fmt.Errorf("expected %d af bytes, got %d", keysize*stripes, len(splitKey))
 	}
@@ -523,7 +523,7 @@ func afmerge(splitKey []byte, h hash.Hash, keysize int, stripes int) ([]byte, er
 	return d, nil
 }
 
-func afsplit(key []byte, h hash.Hash, stripes int) ([]byte, error) {
+func afSplit(key []byte, h hash.Hash, stripes int) ([]byte, error) {
 	d := make([]byte, len(key)*stripes)
 	s := make([]byte, len(key))
 	for i := 0; i < stripes; i++ {

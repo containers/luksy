@@ -67,7 +67,7 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 				fmt.Fprintf(tw, "\tstripes\t%d\n", ks.Stripes())
 			}
 		}
-		err = v1header.Check("password", f)
+		_, err = v1header.Check("password", f)
 		fmt.Fprintf(tw, "Check(password)\t%v\n", err)
 	}
 	if v2header != nil {
