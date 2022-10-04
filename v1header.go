@@ -463,6 +463,23 @@ func v1decrypt(cipherName, cipherMode string, key []byte, ciphertext []byte) ([]
 				}
 				cipher.Decrypt(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
 			}
+		case "cbc-plain":
+			block, err := aes.NewCipher(key)
+			if err != nil {
+				return nil, fmt.Errorf("initializing decryption: %w", err)
+			}
+			for processed := 0; processed < len(plaintext); processed += V1SectorSize {
+				blockLeft := V1SectorSize
+				if processed+blockLeft > len(plaintext) {
+					blockLeft = len(plaintext) - processed
+				}
+				ivValue := processed / V1SectorSize
+				iv := []byte{uint8((ivValue) & 0xff), uint8((ivValue >> 8) & 0xff), uint8((ivValue >> 16) & 0xff), uint8((ivValue >> 24) & 0xff)}
+				iv0 := make([]byte, aes.BlockSize)
+				copy(iv0, iv)
+				cipher := cipher.NewCBCDecrypter(block, iv0)
+				cipher.CryptBlocks(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
+			}
 		case "xts-plain64":
 			cipher, err := xts.NewCipher(aes.NewCipher, key)
 			if err != nil {
@@ -504,6 +521,23 @@ func v1encrypt(cipherName, cipherMode string, key []byte, plaintext []byte) ([]b
 					blockLeft = len(plaintext) - processed
 				}
 				cipher.Encrypt(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft])
+			}
+		case "cbc-plain":
+			block, err := aes.NewCipher(key)
+			if err != nil {
+				return nil, fmt.Errorf("initializing decryption: %w", err)
+			}
+			for processed := 0; processed < len(plaintext); processed += V1SectorSize {
+				blockLeft := V1SectorSize
+				if processed+blockLeft > len(plaintext) {
+					blockLeft = len(plaintext) - processed
+				}
+				ivValue := processed / V1SectorSize
+				iv := []byte{uint8((ivValue) & 0xff), uint8((ivValue >> 8) & 0xff), uint8((ivValue >> 16) & 0xff), uint8((ivValue >> 24) & 0xff)}
+				iv0 := make([]byte, aes.BlockSize)
+				copy(iv0, iv)
+				cipher := cipher.NewCBCEncrypter(block, iv0)
+				cipher.CryptBlocks(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft])
 			}
 		case "xts-plain64":
 			cipher, err := xts.NewCipher(aes.NewCipher, key)
