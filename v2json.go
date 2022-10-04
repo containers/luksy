@@ -1,4 +1,4 @@
-package mkluks
+package lukstool
 
 type V2JSON struct {
 	Config   V2JSONConfig             `json:"config"`
@@ -9,6 +9,18 @@ type V2JSON struct {
 }
 
 type V2JSONKeyslotPriority int
+
+func (p V2JSONKeyslotPriority) String() string {
+	switch p {
+	case V2JSONKeyslotPriorityIgnore:
+		return "ignore"
+	case V2JSONKeyslotPriorityNormal:
+		return "normal"
+	case V2JSONKeyslotPriorityHigh:
+		return "high"
+	}
+	return "unknown"
+}
 
 const (
 	V2JSONKeyslotPriorityIgnore = V2JSONKeyslotPriority(0)
@@ -60,14 +72,13 @@ type V2JSONAreaDatashift struct {
 }
 
 type V2JSONAreaDatashiftChecksum struct {
-	Hash       string `json:"hash"`
-	SectorSize int    `json:"sector_size"`
-	ShiftSize  int    `json:"shift_size,string"`
+	V2JSONAreaChecksum
+	V2JSONAreaDatashift
 }
 
 type V2JSONAF struct {
-	Type string `json:"type"` // "luks1"
-	*V2JSONAFLUKS1
+	Type           string `json:"type"` // "luks1"
+	*V2JSONAFLUKS1        // type == "luks1"
 }
 
 type V2JSONAFLUKS1 struct {
@@ -76,10 +87,10 @@ type V2JSONAFLUKS1 struct {
 }
 
 type V2JSONKdf struct {
-	Type string `json:"type"`
-	Salt []byte `json:"salt"`
-	*V2JSONKdfPbkdf2
-	*V2JSONKdfArgon2i
+	Type              string `json:"type"`
+	Salt              []byte `json:"salt"`
+	*V2JSONKdfPbkdf2         // type = "pbkdf2"
+	*V2JSONKdfArgon2i        // type = "argon2i"
 }
 
 type V2JSONKdfPbkdf2 struct {
@@ -94,11 +105,11 @@ type V2JSONKdfArgon2i struct {
 }
 
 type V2JSONSegment struct {
-	Type                string   `json:"type"` // only "linear", "crypt"
-	Offset              string   `json:"offset"`
-	Size                string   `json:"size"` // "dynamic"
-	Flags               []string `json:"flags"`
-	*V2JSONSegmentCrypt `json:",omitempty"`
+	Type                string              `json:"type"` // only "linear", "crypt"
+	Offset              string              `json:"offset"`
+	Size                string              `json:"size"` // "dynamic"
+	Flags               []string            `json:"flags"`
+	*V2JSONSegmentCrypt `json:",omitempty"` // type = "crypt"
 }
 
 type V2JSONSegmentCrypt struct {
@@ -115,12 +126,12 @@ type V2JSONSegmentIntegrity struct {
 }
 
 type V2JSONDigest struct {
-	Type     string   `json:"type"`
-	Keyslots []string `json:"keyslots"`
-	Segments []string `json:"segments"`
-	Salt     []byte   `json:"salt"`
-	Digest   string   `json:"digest"`
-	*V2JSONDigestPbkdf2
+	Type                string   `json:"type"`
+	Keyslots            []string `json:"keyslots"`
+	Segments            []string `json:"segments"`
+	Salt                []byte   `json:"salt"`
+	Digest              string   `json:"digest"`
+	*V2JSONDigestPbkdf2          // type == "pbkdf2"
 }
 
 type V2JSONDigestPbkdf2 struct {

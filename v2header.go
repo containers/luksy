@@ -1,4 +1,4 @@
-package mkluks
+package lukstool
 
 import (
 	"fmt"
@@ -36,9 +36,9 @@ const (
 	v2Padding1Length          = 184
 	v2ChecksumStart           = v2Padding1Start + v2Padding1Length
 	v2ChecksumLength          = 64
-	v2Padding2Start           = v2ChecksumStart + v2ChecksumLength
-	v2Padding2Length          = 7 * 512
-	v2HeaderStructSize        = v2Padding2Start + v2Padding2Length
+	v2Padding4096Start        = v2ChecksumStart + v2ChecksumLength
+	v2Padding4096Length       = 7 * 512
+	v2HeaderStructSize        = v2Padding4096Start + v2Padding4096Length
 )
 
 func (h V2Header) Magic() string {
