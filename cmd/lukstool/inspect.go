@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var all bool
+
 func init() {
 	inspectCommand := &cobra.Command{
 		Use:   "inspect",
@@ -22,6 +24,7 @@ func init() {
 
 	flags := inspectCommand.Flags()
 	flags.SetInterspersed(false)
+	flags.BoolVarP(&all, "all", "a", false, "include information about inactive key slots")
 	rootCmd.AddCommand(inspectCommand)
 }
 
@@ -31,7 +34,7 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	defer f.Close()
-	v1header, v2header, v2json, err := lukstool.ReadHeaders(f, lukstool.ReadHeaderOptions{})
+	v1header, v2header, _, v2json, err := lukstool.ReadHeaders(f, lukstool.ReadHeaderOptions{})
 	if err != nil {
 		return err
 	}
@@ -60,8 +63,14 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return fmt.Errorf("reading key slot %d status: %w", i, err)
 			}
-			if active {
-				fmt.Fprintf(tw, "Slot %d\titerations\t%d\n", i, ks.Iterations())
+			if active || all {
+				active, err := ks.Active()
+				activeStr := fmt.Sprintf("%t", active)
+				if err != nil {
+					activeStr = fmt.Sprintf("unknown (corrupted?): %v", err)
+				}
+				fmt.Fprintf(tw, "Slot %d\tactive\t%s\n", i, activeStr)
+				fmt.Fprintf(tw, "\titerations\t%d\n", ks.Iterations())
 				fmt.Fprintf(tw, "\tsalt\t%q\n", ks.KeySlotSalt())
 				fmt.Fprintf(tw, "\tkey material offset sectors\t%d\n", ks.KeyMaterialOffset())
 				fmt.Fprintf(tw, "\tstripes\t%d\n", ks.Stripes())
@@ -126,7 +135,9 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 			}
 		}
 		for key, digest := range v2json.Digests {
-			fmt.Fprintf(tw, "Digest %s\ttype %s\n", key, digest.Type)
+			fmt.Fprintf(tw, "Digest %s\tdigest %q\n", key, digest.Digest)
+			fmt.Fprintf(tw, "\tsalt\t%q\n", digest.Salt)
+			fmt.Fprintf(tw, "\ttype\t%q\n", digest.Type)
 			switch digest.Type {
 			case "pbkdf2":
 				fmt.Fprintf(tw, "\thash %s, iterations %d\n", digest.Hash, digest.Iterations)
@@ -139,6 +150,8 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 				fmt.Fprintf(tw, "\tdescription %q\n", token.KeyDescription)
 			}
 		}
+		_, err = v2header.Check("password", f, *v2json)
+		fmt.Fprintf(tw, "Check(password)\t%v\n", err)
 	}
 	return nil
 }

@@ -112,10 +112,6 @@ var (
 	}
 )
 
-type v1NewBlockCipherFunction func(key []byte) (cipher.Block, error)
-type v1NewBlockCipherModeFunction func(v1NewBlockCipherFunction, key []byte) (cipher.Block, error)
-type v1NewHashFunction func() hash.Hash
-
 func (h V1Header) readu2(offset int) uint16 {
 	t := uint16(0)
 	for i := 0; i < 2; i++ {
@@ -385,6 +381,45 @@ func (s *V1KeySlot) SetStripes(stripes uint32) {
 	s.writeu4(v1KeySlotStripesStart, stripes)
 }
 
+func CreateV1() ([]byte, error) {
+	salt := make([]byte, V1SaltSize)
+	n, err := rand.Read(salt)
+	if err != nil {
+		return nil, err
+	}
+	if n != len(salt) {
+		return nil, errors.New("short read")
+	}
+	ksSalt := make([]byte, v1KeySlotSaltLength*8)
+	n, err = rand.Read(ksSalt)
+	if err != nil {
+		return nil, err
+	}
+	if n != len(ksSalt) {
+		return nil, errors.New("short read")
+	}
+
+	var h V1Header
+	h.SetMagic(V1Magic)
+	h.SetVersion(1)
+	h.SetCipherName("aes")
+	h.SetCipherMode("xts-plain64")
+	h.SetHashSpec("sha256")
+	h.SetKeyBytes(32)
+	h.SetMKDigestSalt(salt)
+	h.SetMKDigestIter(4000)
+	h.SetUUID("")
+	for i := 0; i < 7; i++ {
+		var keyslot V1KeySlot
+		keyslot.SetActive(false)
+		keyslot.SetIterations(h.MKDigestIter())
+		keyslot.SetStripes(4000)
+		keyslot.SetKeySlotSalt(ksSalt[i*v1KeySlotSaltLength : (i+1)*v1KeySlotSaltLength])
+		h.SetKeySlot(i, keyslot)
+	}
+	return nil, nil
+}
+
 func (h V1Header) Check(password string, f *os.File) ([]byte, error) {
 	var hasher func() hash.Hash
 	switch h.HashSpec() {
@@ -619,4 +654,11 @@ func afSplit(key []byte, h hash.Hash, stripes int) ([]byte, error) {
 		s[(stripes-1)*keysize+j] = d[j] ^ key[j]
 	}
 	return s, nil
+}
+
+func roundUpToMultiple(i, factor int) int {
+	if i < 0 {
+		return 0
+	}
+	return i + ((factor - (i % factor)) % factor)
 }

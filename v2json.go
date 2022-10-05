@@ -90,7 +90,7 @@ type V2JSONKdf struct {
 	Type              string `json:"type"`
 	Salt              []byte `json:"salt"`
 	*V2JSONKdfPbkdf2         // type = "pbkdf2"
-	*V2JSONKdfArgon2i        // type = "argon2i"
+	*V2JSONKdfArgon2i        // type = "argon2i" or type = "argon2id"
 }
 
 type V2JSONKdfPbkdf2 struct {
@@ -107,7 +107,7 @@ type V2JSONKdfArgon2i struct {
 type V2JSONSegment struct {
 	Type                string              `json:"type"` // only "linear", "crypt"
 	Offset              string              `json:"offset"`
-	Size                string              `json:"size"` // "dynamic"
+	Size                string              `json:"size"` // numeric value or "dynamic"
 	Flags               []string            `json:"flags"`
 	*V2JSONSegmentCrypt `json:",omitempty"` // type = "crypt"
 }
@@ -115,7 +115,7 @@ type V2JSONSegment struct {
 type V2JSONSegmentCrypt struct {
 	IVTweak    int                     `json:"iv_tweak,string"`
 	Encryption string                  `json:"encryption"`
-	SectorSize int                     `json:"sector_size"`
+	SectorSize int                     `json:"sector_size"` // 512 or 1024 or 2048 or 4096
 	Integrity  *V2JSONSegmentIntegrity `json:"integrity,omitempty"`
 }
 
@@ -130,7 +130,7 @@ type V2JSONDigest struct {
 	Keyslots            []string `json:"keyslots"`
 	Segments            []string `json:"segments"`
 	Salt                []byte   `json:"salt"`
-	Digest              string   `json:"digest"`
+	Digest              []byte   `json:"digest"`
 	*V2JSONDigestPbkdf2          // type == "pbkdf2"
 }
 

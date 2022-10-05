@@ -85,3 +85,19 @@ func Test_enc_roundtrip(t *testing.T) {
 		})
 	}
 }
+
+func Test_roundUpToMultiple(t *testing.T) {
+	type testCases struct {
+		input, factor, result int
+	}
+	for _, testCase := range []testCases{
+		{1, 2048, 2048},
+		{2048, 2048, 2048},
+		{4095, 2048, 4096},
+		{4097, 2048, 6144},
+	} {
+		t.Run(fmt.Sprintf("%d:%d", testCase.input, testCase.factor), func(t *testing.T) {
+			assert.Equal(t, testCase.result, roundUpToMultiple(testCase.input, testCase.factor))
+		})
+	}
+}
