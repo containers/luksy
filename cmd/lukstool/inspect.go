@@ -76,8 +76,6 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 				fmt.Fprintf(tw, "\tstripes\t%d\n", ks.Stripes())
 			}
 		}
-		_, err = v1header.Check("password", f)
-		fmt.Fprintf(tw, "Check(password)\t%v\n", err)
 	}
 	if v2header != nil {
 		if v2header.Version() != 2 {
@@ -150,8 +148,6 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 				fmt.Fprintf(tw, "\tdescription %q\n", token.KeyDescription)
 			}
 		}
-		_, err = v2header.Check("password", f, *v2json)
-		fmt.Fprintf(tw, "Check(password)\t%v\n", err)
 	}
 	return nil
 }
