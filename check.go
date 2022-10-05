@@ -50,7 +50,7 @@ func (h V1Header) Check(password string, f *os.File) ([]byte, error) {
 			fmt.Fprintf(os.Stderr, "error attempting to compute main key: %v\n", err)
 			continue
 		}
-		mkcandidateDerived := pbkdf2.Key(mkCandidate, h.MKDigestSalt(), int(h.MKDigestIter()), V1DigestSize, hasher)
+		mkcandidateDerived := pbkdf2.Key(mkCandidate, h.MKDigestSalt(), int(h.MKDigestIter()), v1DigestSize, hasher)
 		if bytes.Equal(mkcandidateDerived, h.MKDigest()) {
 			return mkCandidate, nil
 		}

@@ -26,9 +26,9 @@ const (
 	v1KeyBytesStart       = v1PayloadOffsetStart + v1PayloadOffsetLength
 	v1KeyBytesLength      = 4
 	v1MKDigestStart       = v1KeyBytesStart + v1KeyBytesLength
-	v1MKDigestLength      = V1DigestSize
+	v1MKDigestLength      = v1DigestSize
 	v1MKDigestSaltStart   = v1MKDigestStart + v1MKDigestLength
-	v1MKDigestSaltLength  = V1SaltSize
+	v1MKDigestSaltLength  = v1SaltSize
 	v1MKDigestIterStart   = v1MKDigestSaltStart + v1MKDigestSaltLength
 	v1MKDigestIterLength  = 4
 	v1UUIDStart           = v1MKDigestIterStart + v1MKDigestIterLength
@@ -56,15 +56,15 @@ const (
 	v1KeySlotIterationsStart         = v1KeySlotActiveStart + v1KeySlotActiveLength
 	v1KeySlotIterationsLength        = 4
 	v1KeySlotSaltStart               = v1KeySlotIterationsStart + v1KeySlotIterationsLength
-	v1KeySlotSaltLength              = V1SaltSize
+	v1KeySlotSaltLength              = v1SaltSize
 	v1KeySlotKeyMaterialOffsetStart  = v1KeySlotSaltStart + v1KeySlotSaltLength
 	v1KeySlotKeyMaterialOffsetLength = 4
 	v1KeySlotStripesStart            = v1KeySlotKeyMaterialOffsetStart + v1KeySlotKeyMaterialOffsetLength
 	v1KeySlotStripesLength           = 4
 	v1KeySlotStructSize              = v1KeySlotStripesStart + v1KeySlotStripesLength
 
-	V1DigestSize               = 20
-	V1SaltSize                 = 32
+	v1DigestSize               = 20
+	v1SaltSize                 = 32
 	v1NumKeys                  = 8
 	v1KeySlotActiveKeyDisabled = 0x0000dead
 	v1KeySlotActiveKeyEnabled  = 0x00ac71f3

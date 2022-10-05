@@ -40,8 +40,6 @@ const (
 	v2Padding4096Length       = 7 * 512
 	v2HeaderStructSize        = v2Padding4096Start + v2Padding4096Length
 
-	V2DigestSize    = 20
-	V2SaltSize      = 32
 	V2Stripes       = 4000
 	V2AlignKeyslots = 4096
 	V2SectorSize    = 4096
