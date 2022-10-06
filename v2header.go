@@ -98,7 +98,7 @@ func (h V2Header) readu8(offset int) uint64 {
 func (h *V2Header) writeu2(offset int, value uint16) {
 	t := value
 	for i := 0; i < 2; i++ {
-		h[offset+i] = uint8(uint64(t) & 0xff)
+		h[offset+1-i] = uint8(uint64(t) & 0xff)
 		t >>= 8
 	}
 }
@@ -106,7 +106,7 @@ func (h *V2Header) writeu2(offset int, value uint16) {
 func (h *V2Header) writeu8(offset int, value uint64) {
 	t := value
 	for i := 0; i < 8; i++ {
-		h[offset+i] = uint8(uint64(t) & 0xff)
+		h[offset+7-i] = uint8(uint64(t) & 0xff)
 		t >>= 8
 	}
 }

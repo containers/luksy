@@ -117,7 +117,7 @@ func (h V1Header) readu4(offset int) uint32 {
 func (h *V1Header) writeu2(offset int, value uint16) {
 	t := value
 	for i := 0; i < 2; i++ {
-		h[offset+i] = uint8(uint64(t) & 0xff)
+		h[offset+1-i] = uint8(uint64(t) & 0xff)
 		t >>= 8
 	}
 }
@@ -125,7 +125,7 @@ func (h *V1Header) writeu2(offset int, value uint16) {
 func (h *V1Header) writeu4(offset int, value uint32) {
 	t := value
 	for i := 0; i < 4; i++ {
-		h[offset+i] = uint8(uint32(t) & 0xff)
+		h[offset+3-i] = uint8(uint32(t) & 0xff)
 		t >>= 8
 	}
 }
@@ -304,7 +304,7 @@ func (s V1KeySlot) readu4(offset int) uint32 {
 func (s *V1KeySlot) writeu4(offset int, value uint32) {
 	t := value
 	for i := 0; i < 4; i++ {
-		s[offset+i] = uint8(uint32(t) & 0xff)
+		s[offset+3-i] = uint8(uint32(t) & 0xff)
 		t >>= 8
 	}
 }
