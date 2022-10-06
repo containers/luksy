@@ -6,11 +6,13 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/pbkdf2"
 )
 
 func CreateV1(password []string) ([]byte, []byte, error) {
+	if len(password) == 0 {
+		return nil, nil, errors.New("at least one password is required")
+	}
 	if len(password) > v1NumKeys {
 		return nil, nil, fmt.Errorf("attempted to use %d passwords, only %d possible", len(password), v1NumKeys)
 	}
@@ -38,7 +40,7 @@ func CreateV1(password []string) ([]byte, []byte, error) {
 	h.SetHashSpec("sha256")
 	h.SetKeyBytes(64)
 	h.SetMKDigestSalt(salt)
-	h.SetMKDigestIter(4000)
+	h.SetMKDigestIter(V1Stripes)
 	h.SetUUID(uuid.NewString())
 	mkey := make([]byte, h.KeyBytes())
 	n, err = rand.Read(mkey)
@@ -52,15 +54,15 @@ func CreateV1(password []string) ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, errors.New("internal error")
 	}
-	logrus.Errorf("pbkdf2 %d", h.MKDigestIter())
 	mkdigest := pbkdf2.Key(mkey, h.MKDigestSalt(), int(h.MKDigestIter()), v1DigestSize, hasher)
 	h.SetMKDigest(mkdigest)
 	headerLength := roundUpToMultiple(v1HeaderStructSize, V1AlignKeyslots)
+	iterations := IterationsPBKDF2(salt, int(h.KeyBytes()), hasher)
 	var stripes [][]byte
 	for i := 0; i < v1NumKeys; i++ {
 		var keyslot V1KeySlot
 		keyslot.SetActive(i < len(password))
-		keyslot.SetIterations(h.MKDigestIter())
+		keyslot.SetIterations(uint32(iterations))
 		keyslot.SetStripes(V1Stripes)
 		keyslot.SetKeySlotSalt(ksSalt[i*v1KeySlotSaltLength : (i+1)*v1KeySlotSaltLength])
 		if i < len(password) {
