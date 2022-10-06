@@ -5,14 +5,19 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/pbkdf2"
 )
 
 func CreateV1(password []string) ([]byte, []byte, error) {
+	if len(password) > v1NumKeys {
+		return nil, nil, fmt.Errorf("attempted to use %d passwords, only %d possible", len(password), v1NumKeys)
+	}
 	salt := make([]byte, v1SaltSize)
 	n, err := rand.Read(salt)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("reading random data: %w", err)
 	}
 	if n != len(salt) {
 		return nil, nil, errors.New("short read")
@@ -20,7 +25,7 @@ func CreateV1(password []string) ([]byte, []byte, error) {
 	ksSalt := make([]byte, v1KeySlotSaltLength*8)
 	n, err = rand.Read(ksSalt)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("reading random data: %w", err)
 	}
 	if n != len(ksSalt) {
 		return nil, nil, errors.New("short read")
@@ -31,14 +36,14 @@ func CreateV1(password []string) ([]byte, []byte, error) {
 	h.SetCipherName("aes")
 	h.SetCipherMode("xts-plain64")
 	h.SetHashSpec("sha256")
-	h.SetKeyBytes(32)
+	h.SetKeyBytes(64)
 	h.SetMKDigestSalt(salt)
 	h.SetMKDigestIter(4000)
-	h.SetUUID("")
+	h.SetUUID(uuid.NewString())
 	mkey := make([]byte, h.KeyBytes())
 	n, err = rand.Read(mkey)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("reading random data: %w", err)
 	}
 	if n != len(mkey) {
 		return nil, nil, errors.New("short read")
@@ -47,36 +52,47 @@ func CreateV1(password []string) ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, errors.New("internal error")
 	}
+	logrus.Errorf("pbkdf2 %d", h.MKDigestIter())
 	mkdigest := pbkdf2.Key(mkey, h.MKDigestSalt(), int(h.MKDigestIter()), v1DigestSize, hasher)
 	h.SetMKDigest(mkdigest)
 	headerLength := roundUpToMultiple(v1HeaderStructSize, V1AlignKeyslots)
 	var stripes [][]byte
-	for i := 0; i < 7; i++ {
+	for i := 0; i < v1NumKeys; i++ {
 		var keyslot V1KeySlot
 		keyslot.SetActive(i < len(password))
 		keyslot.SetIterations(h.MKDigestIter())
-		keyslot.SetStripes(h.MKDigestIter())
+		keyslot.SetStripes(V1Stripes)
 		keyslot.SetKeySlotSalt(ksSalt[i*v1KeySlotSaltLength : (i+1)*v1KeySlotSaltLength])
 		if i < len(password) {
 			splitKey, err := afSplit(mkey, hasher(), int(h.MKDigestIter()))
 			if err != nil {
 				return nil, nil, fmt.Errorf("splitting key: %w", err)
 			}
-			striped, err := v1encrypt(h.CipherName(), h.CipherMode(), mkey, splitKey)
+			passwordDerived := pbkdf2.Key([]byte(password[i]), keyslot.KeySlotSalt(), int(keyslot.Iterations()), int(h.KeyBytes()), hasher)
+			striped, err := v1encrypt(h.CipherName(), h.CipherMode(), passwordDerived, splitKey)
 			if err != nil {
 				return nil, nil, fmt.Errorf("encrypting split key with password: %w", err)
 			}
-			stripes = append(stripes, striped)
 			if len(striped) != len(mkey)*int(keyslot.Stripes()) {
 				return nil, nil, fmt.Errorf("internal error: got %d stripe bytes, expected %d", len(striped), len(mkey)*int(keyslot.Stripes()))
 			}
+			stripes = append(stripes, striped)
 		}
 		keyslot.SetKeyMaterialOffset(uint32(headerLength / V1SectorSize))
 		h.SetKeySlot(i, keyslot)
 		headerLength += len(mkey) * int(keyslot.Stripes())
-		headerLength = roundUpToMultiple(v1HeaderStructSize, V1AlignKeyslots)
+		headerLength = roundUpToMultiple(headerLength, V1AlignKeyslots)
 	}
-	return nil, nil, nil
+	headerLength = roundUpToMultiple(headerLength, V1SectorSize)
+	h.SetPayloadOffset(uint32(headerLength / V1SectorSize))
+	head := make([]byte, headerLength)
+	offset := copy(head, h[:])
+	offset = roundUpToMultiple(offset, V1AlignKeyslots)
+	for _, stripe := range stripes {
+		copy(head[offset:], stripe)
+		offset = roundUpToMultiple(offset, V1AlignKeyslots)
+	}
+	return head, mkey, nil
 }
 
 func CreateV2(password []string) ([]byte, []byte, error) {
@@ -102,8 +118,9 @@ func CreateV2(password []string) ([]byte, []byte, error) {
 	h2.SetChecksumAlgorithm("sha256")
 	h1.SetSalt(salt)
 	h2.SetSalt(salt)
-	h1.SetUUID("")
-	h2.SetUUID("")
+	uuidString := uuid.NewString()
+	h1.SetUUID(uuidString)
+	h2.SetUUID(uuidString)
 	h1.SetHeaderOffset(0)
 	h2.SetHeaderOffset(0)
 	h1.SetChecksum([]byte{})
