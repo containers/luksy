@@ -133,6 +133,23 @@ func v1decrypt(cipherName, cipherMode string, key []byte, ciphertext []byte) ([]
 	return plaintext, nil
 }
 
+func v2encrypt(cipherSuite string, key []byte, ciphertext []byte) ([]byte, error) {
+	var cipherName, cipherMode string
+	switch {
+	case strings.HasPrefix(cipherSuite, "aes-"):
+		cipherName = "aes"
+		cipherMode = strings.TrimPrefix(cipherSuite, "aes-")
+	default:
+		cipherSpec := strings.SplitN(cipherSuite, "-", 2)
+		if len(cipherSpec) < 2 {
+			return nil, fmt.Errorf("unrecognized cipher suite %q", cipherSuite)
+		}
+		cipherName = cipherSpec[0]
+		cipherMode = cipherSpec[1]
+	}
+	return v1encrypt(cipherName, cipherMode, key, ciphertext)
+}
+
 func v2decrypt(cipherSuite string, key []byte, ciphertext []byte) ([]byte, error) {
 	var cipherName, cipherMode string
 	switch {

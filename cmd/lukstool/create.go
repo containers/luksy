@@ -24,7 +24,7 @@ func init() {
 			return createCmd(cmd, args)
 		},
 		Args:    cobra.ExactArgs(2),
-		Example: `lukstool create /dev/mapper/plaintext-lv /tmp/encrypted.img`,
+		Example: `lukstool create /tmp/plaintext.img /tmp/encrypted.img`,
 	}
 
 	flags := createCommand.Flags()
