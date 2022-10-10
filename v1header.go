@@ -1,6 +1,7 @@
 package lukstool
 
 import (
+	"encoding/binary"
 	"fmt"
 	"syscall"
 )
@@ -99,35 +100,19 @@ var (
 )
 
 func (h V1Header) readu2(offset int) uint16 {
-	t := uint16(0)
-	for i := 0; i < 2; i++ {
-		t = (t << 8) + uint16(h[offset+i])
-	}
-	return t
+	return binary.BigEndian.Uint16(h[offset:])
 }
 
 func (h V1Header) readu4(offset int) uint32 {
-	t := uint32(0)
-	for i := 0; i < 4; i++ {
-		t = (t << 8) + uint32(h[offset+i])
-	}
-	return t
+	return binary.BigEndian.Uint32(h[offset:])
 }
 
 func (h *V1Header) writeu2(offset int, value uint16) {
-	t := value
-	for i := 0; i < 2; i++ {
-		h[offset+1-i] = uint8(uint64(t) & 0xff)
-		t >>= 8
-	}
+	binary.BigEndian.PutUint16(h[offset:], value)
 }
 
 func (h *V1Header) writeu4(offset int, value uint32) {
-	t := value
-	for i := 0; i < 4; i++ {
-		h[offset+3-i] = uint8(uint32(t) & 0xff)
-		t >>= 8
-	}
+	binary.BigEndian.PutUint32(h[offset:], value)
 }
 
 func (h V1Header) Magic() string {
@@ -294,19 +279,11 @@ func (h *V1Header) SetUUID(uuid string) {
 }
 
 func (s V1KeySlot) readu4(offset int) uint32 {
-	t := uint32(0)
-	for i := 0; i < 4; i++ {
-		t = (t << 8) + uint32(s[offset+i])
-	}
-	return t
+	return binary.BigEndian.Uint32(s[offset:])
 }
 
 func (s *V1KeySlot) writeu4(offset int, value uint32) {
-	t := value
-	for i := 0; i < 4; i++ {
-		s[offset+3-i] = uint8(uint32(t) & 0xff)
-		t >>= 8
-	}
+	binary.BigEndian.PutUint32(s[offset:], value)
 }
 
 func (s *V1KeySlot) setInt8(offset int, i []uint8, length int) {

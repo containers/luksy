@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
+	"encoding/binary"
 	"fmt"
 	"hash"
 	"strings"
@@ -57,9 +58,8 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 				blockLeft = len(plaintext) - processed
 			}
 			ivValue := processed/V1SectorSize + ivTweak
-			iv := []byte{uint8((ivValue) & 0xff), uint8((ivValue >> 8) & 0xff), uint8((ivValue >> 16) & 0xff), uint8((ivValue >> 24) & 0xff)}
 			iv0 := make([]byte, block.BlockSize())
-			copy(iv0, iv)
+			binary.LittleEndian.PutUint32(iv0, uint32(ivValue))
 			cipher := cipher.NewCBCEncrypter(block, iv0)
 			cipher.CryptBlocks(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft])
 		}
@@ -125,9 +125,8 @@ func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertex
 				blockLeft = len(plaintext) - processed
 			}
 			ivValue := processed/V1SectorSize + ivTweak
-			iv := []byte{uint8((ivValue) & 0xff), uint8((ivValue >> 8) & 0xff), uint8((ivValue >> 16) & 0xff), uint8((ivValue >> 24) & 0xff)}
 			iv0 := make([]byte, block.BlockSize())
-			copy(iv0, iv)
+			binary.LittleEndian.PutUint32(iv0, uint32(ivValue))
 			cipher := cipher.NewCBCDecrypter(block, iv0)
 			cipher.CryptBlocks(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
 		}
@@ -183,10 +182,12 @@ func v2decrypt(cipherSuite string, ivTweak int, key []byte, ciphertext []byte) (
 
 func diffuse(key []byte, h hash.Hash) []byte {
 	sum := make([]byte, len(key))
-	counter := 0
+	counter := uint32(0)
 	for summed := 0; summed < len(key); summed += h.Size() {
 		h.Reset()
-		h.Write([]byte{uint8((counter >> 24) & 0xff), uint8((counter >> 16) & 0xff), uint8((counter >> 8) & 0xff), uint8((counter) & 0xff)})
+		var buf [4]byte
+		binary.BigEndian.PutUint32(buf[:], counter)
+		h.Write(buf[:])
 		needed := len(key) - summed
 		if needed > h.Size() {
 			needed = h.Size()
