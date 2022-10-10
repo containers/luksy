@@ -12,6 +12,7 @@ import (
 	"hash"
 	"strings"
 
+	"github.com/aead/serpent"
 	"golang.org/x/crypto/cast5"
 	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/twofish"
@@ -30,6 +31,8 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 		newBlockCipher = func(key []byte) (cipher.Block, error) { return twofish.NewCipher(key) }
 	case "cast5":
 		newBlockCipher = func(key []byte) (cipher.Block, error) { return cast5.NewCipher(key) }
+	case "serpent":
+		newBlockCipher = serpent.NewCipher
 	default:
 		return nil, fmt.Errorf("unsupported cipher %s", cipherName)
 	}
@@ -97,6 +100,8 @@ func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertex
 		newBlockCipher = func(key []byte) (cipher.Block, error) { return twofish.NewCipher(key) }
 	case "cast5":
 		newBlockCipher = func(key []byte) (cipher.Block, error) { return cast5.NewCipher(key) }
+	case "serpent":
+		newBlockCipher = serpent.NewCipher
 	default:
 		return nil, fmt.Errorf("unsupported cipher %s", cipherName)
 	}
