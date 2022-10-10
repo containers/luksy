@@ -11,134 +11,151 @@ import (
 	"hash"
 	"strings"
 
+	"golang.org/x/crypto/cast5"
 	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/twofish"
 	"golang.org/x/crypto/xts"
 )
 
-func v1encrypt(cipherName, cipherMode string, key []byte, plaintext []byte) ([]byte, error) {
+func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext []byte) ([]byte, error) {
 	var err error
+	var newBlockCipher func([]byte) (cipher.Block, error)
 	ciphertext := make([]byte, len(plaintext))
+
 	switch cipherName {
 	case "aes":
-		switch cipherMode {
-		case "ecb":
-			cipher, err := aes.NewCipher(key)
-			if err != nil {
-				return nil, fmt.Errorf("initializing decryption: %w", err)
-			}
-			for processed := 0; processed < len(plaintext); processed += cipher.BlockSize() {
-				blockLeft := V1SectorSize
-				if processed+blockLeft > len(plaintext) {
-					blockLeft = len(plaintext) - processed
-				}
-				cipher.Encrypt(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft])
-			}
-		case "cbc-plain":
-			block, err := aes.NewCipher(key)
-			if err != nil {
-				return nil, fmt.Errorf("initializing decryption: %w", err)
-			}
-			for processed := 0; processed < len(plaintext); processed += V1SectorSize {
-				blockLeft := V1SectorSize
-				if processed+blockLeft > len(plaintext) {
-					blockLeft = len(plaintext) - processed
-				}
-				ivValue := processed / V1SectorSize
-				iv := []byte{uint8((ivValue) & 0xff), uint8((ivValue >> 8) & 0xff), uint8((ivValue >> 16) & 0xff), uint8((ivValue >> 24) & 0xff)}
-				iv0 := make([]byte, aes.BlockSize)
-				copy(iv0, iv)
-				cipher := cipher.NewCBCEncrypter(block, iv0)
-				cipher.CryptBlocks(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft])
-			}
-		case "xts-plain64":
-			cipher, err := xts.NewCipher(aes.NewCipher, key)
-			if err != nil {
-				return nil, fmt.Errorf("initializing decryption: %w", err)
-			}
-			for processed := 0; processed < len(plaintext); processed += V1SectorSize {
-				blockLeft := V1SectorSize
-				if processed+blockLeft > len(plaintext) {
-					blockLeft = len(plaintext) - processed
-				}
-				cipher.Encrypt(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft], uint64(processed/V1SectorSize))
-			}
-		default:
-			return nil, fmt.Errorf("unsupported cipher mode %s", cipherMode)
-		}
+		newBlockCipher = aes.NewCipher
+	case "twofish":
+		newBlockCipher = func(key []byte) (cipher.Block, error) { return twofish.NewCipher(key) }
+	case "cast5":
+		newBlockCipher = func(key []byte) (cipher.Block, error) { return cast5.NewCipher(key) }
 	default:
 		return nil, fmt.Errorf("unsupported cipher %s", cipherName)
 	}
+
+	switch cipherMode {
+	case "ecb":
+		cipher, err := newBlockCipher(key)
+		if err != nil {
+			return nil, fmt.Errorf("initializing decryption: %w", err)
+		}
+		for processed := 0; processed < len(plaintext); processed += cipher.BlockSize() {
+			blockLeft := V1SectorSize
+			if processed+blockLeft > len(plaintext) {
+				blockLeft = len(plaintext) - processed
+			}
+			cipher.Encrypt(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft])
+		}
+	case "cbc-plain":
+		block, err := newBlockCipher(key)
+		if err != nil {
+			return nil, fmt.Errorf("initializing decryption: %w", err)
+		}
+		for processed := 0; processed < len(plaintext); processed += V1SectorSize {
+			blockLeft := V1SectorSize
+			if processed+blockLeft > len(plaintext) {
+				blockLeft = len(plaintext) - processed
+			}
+			ivValue := processed/V1SectorSize + ivTweak
+			iv := []byte{uint8((ivValue) & 0xff), uint8((ivValue >> 8) & 0xff), uint8((ivValue >> 16) & 0xff), uint8((ivValue >> 24) & 0xff)}
+			iv0 := make([]byte, block.BlockSize())
+			copy(iv0, iv)
+			cipher := cipher.NewCBCEncrypter(block, iv0)
+			cipher.CryptBlocks(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft])
+		}
+	case "xts-plain64":
+		cipher, err := xts.NewCipher(newBlockCipher, key)
+		if err != nil {
+			return nil, fmt.Errorf("initializing decryption: %w", err)
+		}
+		for processed := 0; processed < len(plaintext); processed += V1SectorSize {
+			blockLeft := V1SectorSize
+			if processed+blockLeft > len(plaintext) {
+				blockLeft = len(plaintext) - processed
+			}
+			cipher.Encrypt(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft], uint64(processed/V1SectorSize))
+		}
+	default:
+		return nil, fmt.Errorf("unsupported cipher mode %s", cipherMode)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("cipher error: %w", err)
 	}
 	return ciphertext, nil
 }
 
-func v1decrypt(cipherName, cipherMode string, key []byte, ciphertext []byte) ([]byte, error) {
+func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertext []byte) ([]byte, error) {
 	var err error
+	var newBlockCipher func([]byte) (cipher.Block, error)
 	plaintext := make([]byte, len(ciphertext))
+
 	switch cipherName {
 	case "aes":
-		switch cipherMode {
-		case "ecb":
-			cipher, err := aes.NewCipher(key)
-			if err != nil {
-				return nil, fmt.Errorf("initializing decryption: %w", err)
-			}
-			for processed := 0; processed < len(ciphertext); processed += cipher.BlockSize() {
-				blockLeft := V1SectorSize
-				if processed+blockLeft > len(ciphertext) {
-					blockLeft = len(ciphertext) - processed
-				}
-				cipher.Decrypt(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
-			}
-		case "cbc-plain":
-			block, err := aes.NewCipher(key)
-			if err != nil {
-				return nil, fmt.Errorf("initializing decryption: %w", err)
-			}
-			for processed := 0; processed < len(plaintext); processed += V1SectorSize {
-				blockLeft := V1SectorSize
-				if processed+blockLeft > len(plaintext) {
-					blockLeft = len(plaintext) - processed
-				}
-				ivValue := processed / V1SectorSize
-				iv := []byte{uint8((ivValue) & 0xff), uint8((ivValue >> 8) & 0xff), uint8((ivValue >> 16) & 0xff), uint8((ivValue >> 24) & 0xff)}
-				iv0 := make([]byte, aes.BlockSize)
-				copy(iv0, iv)
-				cipher := cipher.NewCBCDecrypter(block, iv0)
-				cipher.CryptBlocks(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
-			}
-		case "xts-plain64":
-			cipher, err := xts.NewCipher(aes.NewCipher, key)
-			if err != nil {
-				return nil, fmt.Errorf("initializing decryption: %w", err)
-			}
-			for processed := 0; processed < len(ciphertext); processed += V1SectorSize {
-				blockLeft := V1SectorSize
-				if processed+blockLeft > len(ciphertext) {
-					blockLeft = len(ciphertext) - processed
-				}
-				cipher.Decrypt(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft], uint64(processed/V1SectorSize))
-			}
-		default:
-			return nil, fmt.Errorf("unsupported cipher mode %s", cipherMode)
-		}
+		newBlockCipher = aes.NewCipher
+	case "twofish":
+		newBlockCipher = func(key []byte) (cipher.Block, error) { return twofish.NewCipher(key) }
+	case "cast5":
+		newBlockCipher = func(key []byte) (cipher.Block, error) { return cast5.NewCipher(key) }
 	default:
 		return nil, fmt.Errorf("unsupported cipher %s", cipherName)
 	}
+
+	switch cipherMode {
+	case "ecb":
+		cipher, err := newBlockCipher(key)
+		if err != nil {
+			return nil, fmt.Errorf("initializing decryption: %w", err)
+		}
+		for processed := 0; processed < len(ciphertext); processed += cipher.BlockSize() {
+			blockLeft := V1SectorSize
+			if processed+blockLeft > len(ciphertext) {
+				blockLeft = len(ciphertext) - processed
+			}
+			cipher.Decrypt(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
+		}
+	case "cbc-plain":
+		block, err := newBlockCipher(key)
+		if err != nil {
+			return nil, fmt.Errorf("initializing decryption: %w", err)
+		}
+		for processed := 0; processed < len(plaintext); processed += V1SectorSize {
+			blockLeft := V1SectorSize
+			if processed+blockLeft > len(plaintext) {
+				blockLeft = len(plaintext) - processed
+			}
+			ivValue := processed/V1SectorSize + ivTweak
+			iv := []byte{uint8((ivValue) & 0xff), uint8((ivValue >> 8) & 0xff), uint8((ivValue >> 16) & 0xff), uint8((ivValue >> 24) & 0xff)}
+			iv0 := make([]byte, block.BlockSize())
+			copy(iv0, iv)
+			cipher := cipher.NewCBCDecrypter(block, iv0)
+			cipher.CryptBlocks(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
+		}
+	case "xts-plain64":
+		cipher, err := xts.NewCipher(newBlockCipher, key)
+		if err != nil {
+			return nil, fmt.Errorf("initializing decryption: %w", err)
+		}
+		for processed := 0; processed < len(ciphertext); processed += V1SectorSize {
+			blockLeft := V1SectorSize
+			if processed+blockLeft > len(ciphertext) {
+				blockLeft = len(ciphertext) - processed
+			}
+			cipher.Decrypt(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft], uint64(processed/V1SectorSize))
+		}
+	default:
+		return nil, fmt.Errorf("unsupported cipher mode %s", cipherMode)
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("cipher error: %w", err)
 	}
 	return plaintext, nil
 }
 
-func v2encrypt(cipherSuite string, key []byte, ciphertext []byte) ([]byte, error) {
+func v2encrypt(cipherSuite string, ivTweak int, key []byte, ciphertext []byte) ([]byte, error) {
 	var cipherName, cipherMode string
 	switch {
-	case strings.HasPrefix(cipherSuite, "aes-"):
-		cipherName = "aes"
-		cipherMode = strings.TrimPrefix(cipherSuite, "aes-")
 	default:
 		cipherSpec := strings.SplitN(cipherSuite, "-", 2)
 		if len(cipherSpec) < 2 {
@@ -147,15 +164,12 @@ func v2encrypt(cipherSuite string, key []byte, ciphertext []byte) ([]byte, error
 		cipherName = cipherSpec[0]
 		cipherMode = cipherSpec[1]
 	}
-	return v1encrypt(cipherName, cipherMode, key, ciphertext)
+	return v1encrypt(cipherName, cipherMode, ivTweak, key, ciphertext)
 }
 
-func v2decrypt(cipherSuite string, key []byte, ciphertext []byte) ([]byte, error) {
+func v2decrypt(cipherSuite string, ivTweak int, key []byte, ciphertext []byte) ([]byte, error) {
 	var cipherName, cipherMode string
 	switch {
-	case strings.HasPrefix(cipherSuite, "aes-"):
-		cipherName = "aes"
-		cipherMode = strings.TrimPrefix(cipherSuite, "aes-")
 	default:
 		cipherSpec := strings.SplitN(cipherSuite, "-", 2)
 		if len(cipherSpec) < 2 {
@@ -164,7 +178,7 @@ func v2decrypt(cipherSuite string, key []byte, ciphertext []byte) ([]byte, error
 		cipherName = cipherSpec[0]
 		cipherMode = cipherSpec[1]
 	}
-	return v1decrypt(cipherName, cipherMode, key, ciphertext)
+	return v1decrypt(cipherName, cipherMode, ivTweak, key, ciphertext)
 }
 
 func diffuse(key []byte, h hash.Hash) []byte {

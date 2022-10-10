@@ -77,9 +77,9 @@ func Test_enc_roundtrip(t *testing.T) {
 			for i := 0; i < len(data); i++ {
 				data[i] = uint8(i & 0xff)
 			}
-			encrypted, err := v1encrypt(testCase.cipher, testCase.mode, key, data)
+			encrypted, err := v1encrypt(testCase.cipher, testCase.mode, 0, key, data)
 			require.Nil(t, err, "unexpected error encrypting data")
-			decrypted, err := v1decrypt(testCase.cipher, testCase.mode, key, encrypted)
+			decrypted, err := v1decrypt(testCase.cipher, testCase.mode, 0, key, encrypted)
 			require.Nil(t, err, "unexpected error decrypting data")
 			assert.Equal(t, data, decrypted, "data was altered somewhere")
 		})

@@ -80,7 +80,7 @@ func CreateV1(password []string) ([]byte, []byte, error) {
 				return nil, nil, fmt.Errorf("splitting key: %w", err)
 			}
 			passwordDerived := pbkdf2.Key([]byte(password[i]), keyslot.KeySlotSalt(), int(keyslot.Iterations()), int(h.KeyBytes()), hasher)
-			striped, err := v1encrypt(h.CipherName(), h.CipherMode(), passwordDerived, splitKey)
+			striped, err := v1encrypt(h.CipherName(), h.CipherMode(), 0, passwordDerived, splitKey)
 			if err != nil {
 				return nil, nil, fmt.Errorf("encrypting split key with password: %w", err)
 			}
@@ -199,7 +199,7 @@ func CreateV2(password []string) ([]byte, []byte, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("splitting: %w", err)
 		}
-		striped, err := v2encrypt("aes-xts-plain64", key, split)
+		striped, err := v2encrypt("aes-xts-plain64", 0, key, split)
 		if err != nil {
 			return nil, nil, fmt.Errorf("encrypting: %w", err)
 		}
