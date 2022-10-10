@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/argon2"
@@ -25,15 +26,6 @@ func CreateV1(password []string) ([]byte, []byte, error) {
 		return nil, nil, fmt.Errorf("reading random data: %w", err)
 	}
 	if n != len(salt) {
-		return nil, nil, errors.New("short read")
-	}
-
-	ksSalt := make([]byte, v1KeySlotSaltLength*8)
-	n, err = rand.Read(ksSalt)
-	if err != nil {
-		return nil, nil, fmt.Errorf("reading random data: %w", err)
-	}
-	if n != len(ksSalt) {
 		return nil, nil, errors.New("short read")
 	}
 
@@ -68,12 +60,20 @@ func CreateV1(password []string) ([]byte, []byte, error) {
 	headerLength := roundUpToMultiple(v1HeaderStructSize, V1AlignKeyslots)
 	iterations := IterationsPBKDF2(salt, int(h.KeyBytes()), hasher)
 	var stripes [][]byte
+	ksSalt := make([]byte, v1KeySlotSaltLength)
 	for i := 0; i < v1NumKeys; i++ {
+		n, err = rand.Read(ksSalt)
+		if err != nil {
+			return nil, nil, fmt.Errorf("reading random data: %w", err)
+		}
+		if n != len(ksSalt) {
+			return nil, nil, errors.New("short read")
+		}
 		var keyslot V1KeySlot
 		keyslot.SetActive(i < len(password))
 		keyslot.SetIterations(uint32(iterations))
 		keyslot.SetStripes(V1Stripes)
-		keyslot.SetKeySlotSalt(ksSalt[i*v1KeySlotSaltLength : (i+1)*v1KeySlotSaltLength])
+		keyslot.SetKeySlotSalt(ksSalt)
 		if i < len(password) {
 			splitKey, err := afSplit(mkey, hasher(), int(h.MKDigestIter()))
 			if err != nil {
@@ -111,13 +111,38 @@ func CreateV2(password []string) ([]byte, []byte, error) {
 	if len(password) == 0 {
 		return nil, nil, errors.New("at least one password is required")
 	}
-	salt := make([]byte, v2SaltLength)
-	n, err := rand.Read(salt)
+	headerSalts := make([]byte, v1SaltSize*3)
+	n, err := rand.Read(headerSalts)
 	if err != nil {
 		return nil, nil, err
 	}
-	if n != len(salt) {
+	if n != len(headerSalts) {
 		return nil, nil, errors.New("short read")
+	}
+	hSalt1 := headerSalts[:v1SaltSize]
+	hSalt2 := headerSalts[v1SaltSize : v1SaltSize*2]
+	mkeySalt := headerSalts[v1SaltSize*2:]
+
+	roundHeaderSize := func(size int) (int, error) {
+		switch {
+		case size < 0x8000:
+			return 0x8000, nil
+		case size < 0x10000:
+			return 0x10000, nil
+		case size < 0x20000:
+			return 0x20000, nil
+		case size < 0x40000:
+			return 0x40000, nil
+		case size < 0x80000:
+			return 0x80000, nil
+		case size < 0x100000:
+			return 0x100000, nil
+		case size < 0x200000:
+			return 0x200000, nil
+		case size < 0x400000:
+			return 0x400000, nil
+		}
+		return 0, fmt.Errorf("internal error: unsupported header size %d", size)
 	}
 
 	var h1, h2 V2Header
@@ -131,15 +156,15 @@ func CreateV2(password []string) ([]byte, []byte, error) {
 	h2.SetLabel("")
 	h1.SetChecksumAlgorithm("sha256")
 	h2.SetChecksumAlgorithm("sha256")
-	h1.SetSalt(salt)
-	h2.SetSalt(salt)
+	h1.SetSalt(hSalt1)
+	h2.SetSalt(hSalt2)
 	uuidString := uuid.NewString()
 	h1.SetUUID(uuidString)
 	h2.SetUUID(uuidString)
 	h1.SetHeaderOffset(0)
 	h2.SetHeaderOffset(0)
-	h1.SetChecksum([]byte{})
-	h2.SetChecksum([]byte{})
+	h1.SetChecksum(nil)
+	h2.SetChecksum(nil)
 
 	mkey := make([]byte, 64)
 	n, err = rand.Read(mkey)
@@ -150,48 +175,37 @@ func CreateV2(password []string) ([]byte, []byte, error) {
 		return nil, nil, errors.New("short read")
 	}
 
+	keyslotSalt := make([]byte, v1SaltSize)
 	hasher, err := hasherByName(h1.ChecksumAlgorithm())
 	if err != nil {
 		return nil, nil, errors.New("internal error")
 	}
-	iterations := IterationsPBKDF2(salt, len(mkey), hasher)
+	iterations := IterationsPBKDF2(keyslotSalt, len(mkey), hasher)
+	timeCost := 1
+	threadsCost := 4
+	memoryCost := MemoryCostArgon2(keyslotSalt, len(mkey), timeCost, threadsCost)
+	priority := V2JSONKeyslotPriorityNormal
+	var stripes [][]byte
+	var keyslots []V2JSONKeyslot
 
-	mdigest := pbkdf2.Key(mkey, salt, iterations, len(hasher().Sum([]byte{})), hasher)
+	mdigest := pbkdf2.Key(mkey, mkeySalt, iterations, len(hasher().Sum([]byte{})), hasher)
 	digest0 := V2JSONDigest{
-		Type:   "pbkdf2",
-		Salt:   salt,
-		Digest: mdigest,
+		Type:     "pbkdf2",
+		Salt:     mkeySalt,
+		Digest:   mdigest,
+		Segments: []string{"0"},
 		V2JSONDigestPbkdf2: &V2JSONDigestPbkdf2{
 			Hash:       h1.ChecksumAlgorithm(),
 			Iterations: iterations,
 		},
 	}
 
-	j := V2JSON{
-		Config: V2JSONConfig{
-			JsonSize:     0,
-			KeyslotsSize: 0,
-		},
-		Keyslots: map[string]V2JSONKeyslot{},
-		Digests: map[string]V2JSONDigest{
-			"0": digest0,
-		},
-		Segments: map[string]V2JSONSegment{},
-		Tokens:   map[string]V2JSONToken{},
-	}
-
-	keyslotSalt := make([]byte, 64)
-	timeCost := 1
-	threadsCost := 4
-	memoryCost := MemoryCostArgon2(keyslotSalt, len(mkey), timeCost, threadsCost)
-	priority := V2JSONKeyslotPriorityNormal
-	var stripes [][]byte
 	for i := range password {
 		n, err := rand.Read(keyslotSalt)
 		if err != nil {
 			return nil, nil, err
 		}
-		if n != len(salt) {
+		if n != len(keyslotSalt) {
 			return nil, nil, errors.New("short read")
 		}
 		key := argon2.Key([]byte(password[i]), keyslotSalt, uint32(timeCost), uint32(memoryCost), uint8(threadsCost), uint32(len(mkey)))
@@ -209,7 +223,7 @@ func CreateV2(password []string) ([]byte, []byte, error) {
 			KeySize: len(mkey),
 			Area: V2JSONArea{
 				Type:   "raw",
-				Offset: 1, // update
+				Offset: 10000000, // gets updated later
 				Size:   int64(len(striped)),
 				V2JSONAreaRaw: &V2JSONAreaRaw{
 					Encryption: "aes-xts-plain64",
@@ -236,12 +250,13 @@ func CreateV2(password []string) ([]byte, []byte, error) {
 				},
 			},
 		}
-		j.Keyslots[fmt.Sprintf("%d", i)] = keyslot
+		keyslots = append(keyslots, keyslot)
+		digest0.Keyslots = append(digest0.Keyslots, strconv.Itoa(i))
 	}
 
-	j.Segments["0"] = V2JSONSegment{
+	segment0 := V2JSONSegment{
 		Type:   "crypt",
-		Offset: "1", // FIXME
+		Offset: "10000000", // gets updated later
 		Size:   "dynamic",
 		V2JSONSegmentCrypt: &V2JSONSegmentCrypt{
 			IVTweak:    0,
@@ -250,18 +265,86 @@ func CreateV2(password []string) ([]byte, []byte, error) {
 		},
 	}
 
-	var encoded []byte
-	encoded, err = json.Marshal(j)
+	var j V2JSON
+	j = V2JSON{
+		Config:   V2JSONConfig{},
+		Keyslots: map[string]V2JSONKeyslot{},
+		Digests:  map[string]V2JSONDigest{},
+		Segments: map[string]V2JSONSegment{},
+		Tokens:   map[string]V2JSONToken{},
+	}
+rebuild:
+	j.Digests["0"] = digest0
+	j.Segments["0"] = segment0
+	encodedJSON, err := json.Marshal(j)
 	if err != nil {
 		return nil, nil, err
 	}
-	for j.Config.JsonSize != len(encoded) {
-		j.Config.JsonSize = len(encoded)
-		encoded, err = json.Marshal(j)
-		if err != nil {
-			return nil, nil, err
-		}
+	headerPlusPaddedJsonSize, err := roundHeaderSize(int(V2SectorSize) /* binary header */ + len(encodedJSON) + 1)
+	if err != nil {
+		return nil, nil, err
+	}
+	if j.Config.JsonSize != headerPlusPaddedJsonSize-V2SectorSize {
+		j.Config.JsonSize = headerPlusPaddedJsonSize - V2SectorSize
+		goto rebuild
 	}
 
-	return nil, nil, nil
+	if h1.HeaderSize() != uint64(headerPlusPaddedJsonSize) {
+		h1.SetHeaderSize(uint64(headerPlusPaddedJsonSize))
+		h2.SetHeaderSize(uint64(headerPlusPaddedJsonSize))
+		h1.SetHeaderOffset(0)
+		h2.SetHeaderOffset(uint64(headerPlusPaddedJsonSize))
+		goto rebuild
+	}
+
+	keyslotsOffset := h2.HeaderOffset() * 2
+	maxKeys := len(password)
+	if maxKeys < 64 {
+		maxKeys = 64
+	}
+	for i := 0; i < len(password); i++ {
+		oldOffset := keyslots[i].Area.Offset
+		keyslots[i].Area.Offset = int64(keyslotsOffset) + int64(roundUpToMultiple(len(mkey)*V2Stripes, V2AlignKeyslots))*int64(i)
+		j.Keyslots[strconv.Itoa(i)] = keyslots[i]
+		if keyslots[i].Area.Offset != oldOffset {
+			goto rebuild
+		}
+	}
+	keyslotsSize := roundUpToMultiple(len(mkey)*V2Stripes, V2AlignKeyslots) * maxKeys
+	if j.Config.KeyslotsSize != keyslotsSize {
+		j.Config.KeyslotsSize = keyslotsSize
+		goto rebuild
+	}
+
+	segmentOffsetInt := roundUpToMultiple(int(keyslotsOffset)+j.Config.KeyslotsSize, V2SectorSize)
+	segmentOffset := strconv.Itoa(segmentOffsetInt)
+	if segment0.Offset != segmentOffset {
+		segment0.Offset = segmentOffset
+		goto rebuild
+	}
+
+	d1 := hasher()
+	h1.SetChecksum(nil)
+	d1.Write(h1[:])
+	d1.Write(encodedJSON)
+	zeropad := make([]byte, headerPlusPaddedJsonSize-len(h1)-len(encodedJSON))
+	d1.Write(zeropad)
+	h1.SetChecksum(d1.Sum(nil))
+	d2 := hasher()
+	h2.SetChecksum(nil)
+	d2.Write(h2[:])
+	d2.Write(encodedJSON)
+	d1.Write(zeropad)
+	h2.SetChecksum(d2.Sum(nil))
+
+	head := make([]byte, segmentOffsetInt)
+	copy(head, h1[:])
+	copy(head[V2SectorSize:], encodedJSON)
+	copy(head[h2.HeaderOffset():], h2[:])
+	copy(head[h2.HeaderOffset()+V2SectorSize:], encodedJSON)
+	for i := 0; i < len(password); i++ {
+		iAsString := strconv.Itoa(i)
+		copy(head[j.Keyslots[iAsString].Area.Offset:], stripes[i])
+	}
+	return head, mkey, nil
 }

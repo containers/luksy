@@ -108,7 +108,7 @@ type V2JSONSegment struct {
 	Type                string              `json:"type"` // only "linear", "crypt"
 	Offset              string              `json:"offset"`
 	Size                string              `json:"size"` // numeric value or "dynamic"
-	Flags               []string            `json:"flags"`
+	Flags               []string            `json:"flags,omitempty"`
 	*V2JSONSegmentCrypt `json:",omitempty"` // type = "crypt"
 }
 
@@ -141,14 +141,14 @@ type V2JSONDigestPbkdf2 struct {
 
 type V2JSONConfig struct {
 	JsonSize     int      `json:"json_size,string"`
-	KeyslotsSize int      `json:"keyslots_size,string"`
-	Flags        []string `json:"flags"` // one or more of "allow-discards", "same-cpu-crypt", "submit-from-crypt-cpus", "no-journal", "no-read-workqueue", "no-write-workqueue"
+	KeyslotsSize int      `json:"keyslots_size,string,omitempty"`
+	Flags        []string `json:"flags,omitempty"` // one or more of "allow-discards", "same-cpu-crypt", "submit-from-crypt-cpus", "no-journal", "no-read-workqueue", "no-write-workqueue"
 	Requirements []string `json:"requirements,omitempty"`
 }
 
 type V2JSONToken struct {
 	Type                     string   `json:"type"` // "luks2-keyring"
-	Keyslots                 []string `json:"keyslots"`
+	Keyslots                 []string `json:"keyslots,omitempty"`
 	*V2JSONTokenLUKS2Keyring          // type == "luks2-keyring"
 }
 

@@ -174,10 +174,9 @@ func dupInt8(s []uint8) []uint8 {
 }
 
 func (h *V2Header) setInt8(offset int, s []uint8, length int) {
-	for len(s) < length {
-		s = append(s, 0)
-	}
-	copy(h[offset:offset+length], s)
+	t := make([]byte, length)
+	copy(t, s)
+	copy(h[offset:offset+length], t)
 }
 
 func (h V2Header) Salt() []uint8 {
@@ -213,6 +212,10 @@ func (h *V2Header) SetHeaderOffset(o uint64) {
 }
 
 func (h V2Header) Checksum() []uint8 {
+	hasher, err := hasherByName(h.ChecksumAlgorithm())
+	if err == nil {
+		return dupInt8(h[v2ChecksumStart : v2ChecksumStart+hasher().Size()])
+	}
 	return dupInt8(h[v2ChecksumStart : v2ChecksumStart+v2ChecksumLength])
 }
 

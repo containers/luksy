@@ -27,7 +27,7 @@ func ReadHeaders(f *os.File, options ReadHeaderOptions) (*V1Header, *V2Header, *
 		return nil, nil, nil, nil, fmt.Errorf("only able to read %d bytes - file truncated?", n)
 	}
 	if v2a.Magic() != V2Magic1 {
-		return nil, nil, nil, nil, fmt.Errorf("internal error: magic mismatch in LUKS header")
+		return nil, nil, nil, nil, fmt.Errorf("internal error: magic mismatch in LUKS header (%q)", v2a.Magic())
 	}
 	switch v2a.Version() { // is it a v1 header, or the first v2 header?
 	case 1:

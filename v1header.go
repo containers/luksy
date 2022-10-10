@@ -149,9 +149,8 @@ func (h *V1Header) setZeroString(offset int, value string, length int) {
 }
 
 func (h *V1Header) setInt8(offset int, s []uint8, length int) {
-	for len(s) < length {
-		s = append(s, 0)
-	}
+	t := make([]byte, length)
+	copy(t, s)
 	copy(h[offset:offset+length], s)
 }
 

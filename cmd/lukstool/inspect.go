@@ -136,6 +136,7 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(tw, "Digest %s\tdigest %q\n", key, digest.Digest)
 			fmt.Fprintf(tw, "\tsalt\t%q\n", digest.Salt)
 			fmt.Fprintf(tw, "\ttype\t%q\n", digest.Type)
+			fmt.Fprintf(tw, "\tsegments\t%v\n", digest.Segments)
 			switch digest.Type {
 			case "pbkdf2":
 				fmt.Fprintf(tw, "\thash %s, iterations %d\n", digest.Hash, digest.Iterations)
