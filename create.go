@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-func CreateV1(password []string) ([]byte, []byte, error) {
+func CreateV1(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 	if len(password) == 0 {
 		return nil, nil, errors.New("at least one password is required")
 	}
@@ -104,10 +104,16 @@ func CreateV1(password []string) ([]byte, []byte, error) {
 		copy(head[offset:], stripe)
 		offset = roundUpToMultiple(offset, V1AlignKeyslots)
 	}
-	return head, mkey, nil
+	ivTweak := 0
+	encryptStream := func(plaintext []byte) ([]byte, error) {
+		ciphertext, err := v1encrypt(h.CipherName(), h.CipherMode(), ivTweak, mkey, plaintext)
+		ivTweak += len(plaintext) / V1SectorSize
+		return ciphertext, err
+	}
+	return head, encryptStream, nil
 }
 
-func CreateV2(password []string) ([]byte, []byte, error) {
+func CreateV2(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 	if len(password) == 0 {
 		return nil, nil, errors.New("at least one password is required")
 	}
@@ -346,5 +352,11 @@ rebuild:
 		iAsString := strconv.Itoa(i)
 		copy(head[j.Keyslots[iAsString].Area.Offset:], stripes[i])
 	}
-	return head, mkey, nil
+	ivTweak := 0
+	encryptStream := func(plaintext []byte) ([]byte, error) {
+		ciphertext, err := v2encrypt("aes-xts-plain64", ivTweak, mkey, plaintext)
+		ivTweak += len(plaintext) / V1SectorSize
+		return ciphertext, err
+	}
+	return head, encryptStream, nil
 }
