@@ -66,6 +66,47 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 			cipher := cipher.NewCBCEncrypter(block, iv0)
 			cipher.CryptBlocks(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft])
 		}
+	case "cbc-essiv:sha256":
+		hasherName := strings.TrimPrefix(cipherMode, "cbc-essiv:")
+		hasher, err := hasherByName(hasherName)
+		if err != nil {
+			return nil, fmt.Errorf("initializing encryption using hash %s: %w", hasherName, err)
+		}
+		h := hasher()
+		h.Write(key)
+		makeiv, err := newBlockCipher(h.Sum(nil))
+		if err != nil {
+			return nil, fmt.Errorf("initializing encryption: %w", err)
+		}
+		block, err := newBlockCipher(key)
+		if err != nil {
+			return nil, fmt.Errorf("initializing encryption: %w", err)
+		}
+		for processed := 0; processed < len(plaintext); processed += sectorSize {
+			blockLeft := sectorSize
+			if processed+blockLeft > len(plaintext) {
+				blockLeft = len(plaintext) - processed
+			}
+			ivValue := (processed/sectorSize + ivTweak)
+			plain0 := make([]byte, makeiv.BlockSize())
+			binary.LittleEndian.PutUint64(plain0, uint64(ivValue))
+			iv0 := make([]byte, makeiv.BlockSize())
+			makeiv.Encrypt(iv0, plain0)
+			cipher := cipher.NewCBCEncrypter(block, iv0)
+			cipher.CryptBlocks(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
+		}
+	case "xts-plain":
+		cipher, err := xts.NewCipher(newBlockCipher, key)
+		if err != nil {
+			return nil, fmt.Errorf("initializing decryption: %w", err)
+		}
+		for processed := 0; processed < len(plaintext); processed += sectorSize {
+			blockLeft := sectorSize
+			if processed+blockLeft > len(plaintext) {
+				blockLeft = len(plaintext) - processed
+			}
+			cipher.Encrypt(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft], uint64((processed/sectorSize+ivTweak)*sectorSize/V1SectorSize)<<32)
+		}
 	case "xts-plain64":
 		cipher, err := xts.NewCipher(newBlockCipher, key)
 		if err != nil {
@@ -134,6 +175,47 @@ func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertex
 			binary.LittleEndian.PutUint32(iv0, uint32(ivValue))
 			cipher := cipher.NewCBCDecrypter(block, iv0)
 			cipher.CryptBlocks(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
+		}
+	case "cbc-essiv:sha256":
+		hasherName := strings.TrimPrefix(cipherMode, "cbc-essiv:")
+		hasher, err := hasherByName(hasherName)
+		if err != nil {
+			return nil, fmt.Errorf("initializing decryption using hash %s: %w", hasherName, err)
+		}
+		h := hasher()
+		h.Write(key)
+		makeiv, err := newBlockCipher(h.Sum(nil))
+		if err != nil {
+			return nil, fmt.Errorf("initializing encryption: %w", err)
+		}
+		block, err := newBlockCipher(key)
+		if err != nil {
+			return nil, fmt.Errorf("initializing encryption: %w", err)
+		}
+		for processed := 0; processed < len(plaintext); processed += sectorSize {
+			blockLeft := sectorSize
+			if processed+blockLeft > len(plaintext) {
+				blockLeft = len(plaintext) - processed
+			}
+			ivValue := (processed/sectorSize + ivTweak)
+			plain0 := make([]byte, makeiv.BlockSize())
+			binary.LittleEndian.PutUint64(plain0, uint64(ivValue))
+			iv0 := make([]byte, makeiv.BlockSize())
+			makeiv.Encrypt(iv0, plain0)
+			cipher := cipher.NewCBCDecrypter(block, iv0)
+			cipher.CryptBlocks(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
+		}
+	case "xts-plain":
+		cipher, err := xts.NewCipher(newBlockCipher, key)
+		if err != nil {
+			return nil, fmt.Errorf("initializing decryption: %w", err)
+		}
+		for processed := 0; processed < len(ciphertext); processed += sectorSize {
+			blockLeft := sectorSize
+			if processed+blockLeft > len(ciphertext) {
+				blockLeft = len(ciphertext) - processed
+			}
+			cipher.Decrypt(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft], uint64((processed/sectorSize+ivTweak)*sectorSize/V1SectorSize)<<32)
 		}
 	case "xts-plain64":
 		cipher, err := xts.NewCipher(newBlockCipher, key)
