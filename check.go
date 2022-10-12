@@ -156,8 +156,8 @@ func (h V2Header) Check(password string, f *os.File, j V2JSON) (func([]byte) ([]
 			if keyslot.Area.Type != "raw" {
 				return nil, -1, -1, fmt.Errorf("key slot %q is corrupt: key data area is not raw", k)
 			}
-			if keyslot.Area.KeySize != keyslot.KeySize*keyslot.AF.Stripes {
-				return nil, -1, -1, fmt.Errorf("key slot %q is corrupt: key data area is wrong size (%d != %d)", k, keyslot.Area.KeySize*V2SectorSize, keyslot.KeySize*keyslot.AF.Stripes)
+			if keyslot.Area.KeySize*V2SectorSize < keyslot.KeySize*keyslot.AF.Stripes {
+				return nil, -1, -1, fmt.Errorf("key slot %q is corrupt: key data area is too small (%d < %d)", k, keyslot.Area.KeySize*V2SectorSize, keyslot.KeySize*keyslot.AF.Stripes)
 			}
 			var passwordDerived []byte
 			switch keyslot.V2JSONKeyslotLUKS2.Kdf.Type {
