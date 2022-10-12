@@ -7,6 +7,7 @@ uuid=
 teardown() {
     if test -n "$uuid" ; then
         cryptsetup close "$uuid"
+        uuid=
     fi
 }
 
@@ -25,6 +26,7 @@ teardown() {
             echo -n "${password}" | cryptsetup -q --key-file - luksOpen ${BATS_TEST_TMPDIR}/encrypted ${uuid}
             cmp /dev/mapper/${uuid} ${BATS_TEST_TMPDIR}/plaintext
             cryptsetup close ${uuid}
+            uuid=
             rm -f ${BATS_TEST_TMPDIR}/encrypted
             echo password: "${password}" version: "${luksVersion}" ok
         done
@@ -48,6 +50,7 @@ teardown() {
             echo -n "${password}" | cryptsetup luksOpen -q --key-file - ${BATS_TEST_TMPDIR}/encrypted ${uuid}
             cmp /dev/mapper/${uuid} ${BATS_TEST_TMPDIR}/plaintext
             cryptsetup close ${uuid}
+            uuid=
             rm -f ${BATS_TEST_TMPDIR}/encrypted
             rm -f ${BATS_TEST_TMPDIR}/plaintext
             echo password: "${password}" version: "${luksVersion}" ok
