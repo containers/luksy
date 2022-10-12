@@ -58,7 +58,7 @@ func (h V1Header) Check(password string, f *os.File) (func([]byte) ([]byte, erro
 		mkcandidateDerived := pbkdf2.Key(mkCandidate, h.MKDigestSalt(), int(h.MKDigestIter()), v1DigestSize, hasher)
 		ivTweak := 0
 		decryptStream := func(ciphertext []byte) ([]byte, error) {
-			plaintext, err := v1decrypt(h.CipherName(), h.CipherMode(), ivTweak, mkCandidate, ciphertext)
+			plaintext, err := v1decrypt(h.CipherName(), h.CipherMode(), ivTweak, mkCandidate, ciphertext, V1SectorSize)
 			ivTweak += len(ciphertext) / V1SectorSize
 			return plaintext, err
 		}
