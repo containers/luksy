@@ -45,7 +45,7 @@ func (h V1Header) Check(password string, f *os.File) (func([]byte) ([]byte, erro
 		if n != len(striped) {
 			return nil, -1, -1, fmt.Errorf("short read while reading diffuse material for keyslot %d: expected %d, got %d", k, len(striped), n)
 		}
-		splitKey, err := v1decrypt(h.CipherName(), h.CipherMode(), 0, passwordDerived, striped)
+		splitKey, err := v1decrypt(h.CipherName(), h.CipherMode(), 0, passwordDerived, striped, V1SectorSize)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error attempting to decrypt main key: %v\n", err)
 			continue
@@ -191,7 +191,7 @@ func (h V2Header) Check(password string, f *os.File, j V2JSON) (func([]byte) ([]
 			if n != len(striped) {
 				return nil, -1, -1, fmt.Errorf("short read while reading diffuse material for keyslot %q: expected %d, got %d", k, len(striped), n)
 			}
-			splitKey, err := v1decrypt("aes", "xts-plain64", 0, passwordDerived, striped)
+			splitKey, err := v2decrypt("aes-xts-plain64", 0, passwordDerived, striped, V1SectorSize)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error attempting to decrypt main key: %v\n", err)
 				continue

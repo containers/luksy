@@ -80,7 +80,7 @@ func CreateV1(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 				return nil, nil, fmt.Errorf("splitting key: %w", err)
 			}
 			passwordDerived := pbkdf2.Key([]byte(password[i]), keyslot.KeySlotSalt(), int(keyslot.Iterations()), int(h.KeyBytes()), hasher)
-			striped, err := v1encrypt(h.CipherName(), h.CipherMode(), 0, passwordDerived, splitKey)
+			striped, err := v1encrypt(h.CipherName(), h.CipherMode(), 0, passwordDerived, splitKey, V1SectorSize)
 			if err != nil {
 				return nil, nil, fmt.Errorf("encrypting split key with password: %w", err)
 			}
@@ -106,7 +106,7 @@ func CreateV1(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 	}
 	ivTweak := 0
 	encryptStream := func(plaintext []byte) ([]byte, error) {
-		ciphertext, err := v1encrypt(h.CipherName(), h.CipherMode(), ivTweak, mkey, plaintext)
+		ciphertext, err := v1encrypt(h.CipherName(), h.CipherMode(), ivTweak, mkey, plaintext, V1SectorSize)
 		ivTweak += len(plaintext) / V1SectorSize
 		return ciphertext, err
 	}
@@ -117,6 +117,7 @@ func CreateV2(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 	if len(password) == 0 {
 		return nil, nil, errors.New("at least one password is required")
 	}
+
 	headerSalts := make([]byte, v1SaltSize*3)
 	n, err := rand.Read(headerSalts)
 	if err != nil {
@@ -219,7 +220,7 @@ func CreateV2(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("splitting: %w", err)
 		}
-		striped, err := v2encrypt("aes-xts-plain64", 0, key, split)
+		striped, err := v2encrypt("aes-xts-plain64", 0, key, split, V1SectorSize)
 		if err != nil {
 			return nil, nil, fmt.Errorf("encrypting: %w", err)
 		}
