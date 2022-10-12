@@ -215,7 +215,7 @@ func CreateV2(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 			return nil, nil, errors.New("short read")
 		}
 		key := argon2.Key([]byte(password[i]), keyslotSalt, uint32(timeCost), uint32(memoryCost), uint8(threadsCost), uint32(len(mkey)))
-		split, err := afSplit(key, hasher(), V2Stripes)
+		split, err := afSplit(mkey, hasher(), V2Stripes)
 		if err != nil {
 			return nil, nil, fmt.Errorf("splitting: %w", err)
 		}
