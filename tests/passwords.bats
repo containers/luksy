@@ -7,14 +7,15 @@ lukstool=${LUKSTOOL:-${BATS_TEST_DIRNAME}/../lukstool}
     for password in short morethaneight morethansixteenchars ; do
         for luksVersion in "luks1" "luks2" ; do
             echo password: "${password}"
-	    echo version: "${luksVersion}"
-	    fallocate -l 1G ${BATS_TEST_TMPDIR}/encrypted
-	    echo -n "${password}" | cryptsetup luksFormat -q --type ${luksVersion} ${BATS_TEST_TMPDIR}/encrypted -
+            echo version: "${luksVersion}"
+            fallocate -l 1G ${BATS_TEST_TMPDIR}/encrypted
+            echo -n "${password}" | cryptsetup luksFormat -q --type ${luksVersion} ${BATS_TEST_TMPDIR}/encrypted -
             echo -n "${password}" | ${lukstool} checkpw --password-fd 0 ${BATS_TEST_TMPDIR}/encrypted
             rm -f ${BATS_TEST_TMPDIR}/encrypted
             echo password: "${password}" version: "${luksVersion}" ok
         done
     done
+    rm -f ${BATS_TEST_TMPDIR}/plaintext
 }
 
 @test passwords-us-defaults {
@@ -22,11 +23,12 @@ lukstool=${LUKSTOOL:-${BATS_TEST_DIRNAME}/../lukstool}
     for password in short morethaneight morethansixteenchars ; do
         for luksVersion in "" "--luks1" ; do
             echo password: "${password}"
-	    echo version: "${luksVersion}"
+            echo version: "${luksVersion}"
             echo -n "${password}" | ${lukstool} create --password-fd 0 ${luksVersion} ${BATS_TEST_TMPDIR}/plaintext ${BATS_TEST_TMPDIR}/encrypted
             echo -n "${password}" | cryptsetup -q --test-passphrase --key-file - luksOpen ${BATS_TEST_TMPDIR}/encrypted
             rm -f ${BATS_TEST_TMPDIR}/encrypted
             echo password: "${password}" version: "${luksVersion}" ok
         done
     done
+    rm -f ${BATS_TEST_TMPDIR}/plaintext
 }
