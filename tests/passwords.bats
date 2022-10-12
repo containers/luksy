@@ -2,7 +2,7 @@
 
 lukstool=${LUKSTOOL:-${BATS_TEST_DIRNAME}/../lukstool}
 
-@test passwords-cryptsetup {
+@test passwords-cryptsetup-defaults {
     dd if=/dev/urandom bs=1M count=64 of=${BATS_TEST_TMPDIR}/plaintext status=none
     for password in short morethaneight morethansixteenchars ; do
         for luksVersion in "luks1" "luks2" ; do
@@ -17,7 +17,7 @@ lukstool=${LUKSTOOL:-${BATS_TEST_DIRNAME}/../lukstool}
     done
 }
 
-@test passwords-us {
+@test passwords-us-defaults {
     dd if=/dev/urandom bs=1M count=64 of=${BATS_TEST_TMPDIR}/plaintext status=none
     for password in short morethaneight morethansixteenchars ; do
         for luksVersion in "" "--luks1" ; do
