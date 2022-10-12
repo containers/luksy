@@ -18,7 +18,7 @@ lukstool=${LUKSTOOL:-${BATS_TEST_DIRNAME}/../lukstool}
     rm -f ${BATS_TEST_TMPDIR}/plaintext
 }
 
-@test passwords-us-defaults {
+@test passwords-defaults {
     dd if=/dev/urandom bs=1M count=64 of=${BATS_TEST_TMPDIR}/plaintext status=none
     for password in short morethaneight morethansixteenchars ; do
         for luksVersion in "" "--luks1" ; do
