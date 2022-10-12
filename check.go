@@ -212,7 +212,7 @@ func (h V2Header) Check(password string, f *os.File, j V2JSON) (func([]byte) ([]
 			}
 			mkcandidateDerived := pbkdf2.Key(mkCandidate, digest.Salt, digest.Iterations, len(digest.Digest), digester)
 			decryptStream := func(ciphertext []byte) ([]byte, error) {
-				plaintext, err := v2decrypt(payloadEncryption, ivTweak, mkCandidate, ciphertext)
+				plaintext, err := v2decrypt(payloadEncryption, ivTweak, mkCandidate, ciphertext, payloadSectorSize)
 				ivTweak += len(ciphertext) / payloadSectorSize
 				return plaintext, err
 			}

@@ -24,6 +24,7 @@ teardown() {
                 false
             fi
             echo -n "${password}" | cryptsetup -q --key-file - luksOpen ${BATS_TEST_TMPDIR}/encrypted ${uuid}
+            cryptsetup luksDump ${BATS_TEST_TMPDIR}/encrypted
             cmp /dev/mapper/${uuid} ${BATS_TEST_TMPDIR}/plaintext
             cryptsetup close ${uuid}
             uuid=
@@ -36,7 +37,7 @@ teardown() {
 
 @test wrapping-cryptsetup-defaults {
     for password in short morethaneight morethansixteenchars ; do
-        for luksVersion in luks1 luks2 ; do
+        for luksVersion in luks2 luks1 ; do
             echo password: "${password}"
             echo version: "${luksVersion}"
             dd if=/dev/urandom bs=1M count=1024 of=${BATS_TEST_TMPDIR}/encrypted
@@ -48,6 +49,7 @@ teardown() {
                 false
             fi
             echo -n "${password}" | cryptsetup luksOpen -q --key-file - ${BATS_TEST_TMPDIR}/encrypted ${uuid}
+            cryptsetup luksDump ${BATS_TEST_TMPDIR}/encrypted
             cmp /dev/mapper/${uuid} ${BATS_TEST_TMPDIR}/plaintext
             cryptsetup close ${uuid}
             uuid=

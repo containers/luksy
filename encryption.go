@@ -76,7 +76,7 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 			if processed+blockLeft > len(plaintext) {
 				blockLeft = len(plaintext) - processed
 			}
-			cipher.Encrypt(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft], uint64(processed/sectorSize+ivTweak))
+			cipher.Encrypt(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft], uint64((processed/sectorSize+ivTweak)*sectorSize/V1SectorSize))
 		}
 	default:
 		return nil, fmt.Errorf("unsupported cipher mode %s", cipherMode)
@@ -145,7 +145,7 @@ func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertex
 			if processed+blockLeft > len(ciphertext) {
 				blockLeft = len(ciphertext) - processed
 			}
-			cipher.Decrypt(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft], uint64(processed/sectorSize+ivTweak))
+			cipher.Decrypt(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft], uint64((processed/sectorSize+ivTweak)*sectorSize/V1SectorSize))
 		}
 	default:
 		return nil, fmt.Errorf("unsupported cipher mode %s", cipherMode)

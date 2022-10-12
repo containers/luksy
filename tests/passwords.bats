@@ -5,7 +5,7 @@ lukstool=${LUKSTOOL:-${BATS_TEST_DIRNAME}/../lukstool}
 @test passwords-cryptsetup-defaults {
     dd if=/dev/urandom bs=1M count=64 of=${BATS_TEST_TMPDIR}/plaintext status=none
     for password in short morethaneight morethansixteenchars ; do
-        for luksVersion in "luks1" "luks2" ; do
+        for luksVersion in "luks2" "luks1" ; do
             echo password: "${password}"
             echo version: "${luksVersion}"
             fallocate -l 1G ${BATS_TEST_TMPDIR}/encrypted

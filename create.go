@@ -172,6 +172,7 @@ func CreateV2(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 	h2.SetHeaderOffset(0)
 	h1.SetChecksum(nil)
 	h2.SetChecksum(nil)
+	payloadSectorSize := V2SectorSize
 
 	mkey := make([]byte, 64)
 	n, err = rand.Read(mkey)
@@ -268,7 +269,7 @@ func CreateV2(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 		V2JSONSegmentCrypt: &V2JSONSegmentCrypt{
 			IVTweak:    0,
 			Encryption: "aes-xts-plain64",
-			SectorSize: V1SectorSize,
+			SectorSize: payloadSectorSize,
 		},
 	}
 
@@ -355,8 +356,8 @@ rebuild:
 	}
 	ivTweak := 0
 	encryptStream := func(plaintext []byte) ([]byte, error) {
-		ciphertext, err := v2encrypt("aes-xts-plain64", ivTweak, mkey, plaintext)
-		ivTweak += len(plaintext) / V1SectorSize
+		ciphertext, err := v2encrypt("aes-xts-plain64", ivTweak, mkey, plaintext, payloadSectorSize)
+		ivTweak += len(plaintext) / payloadSectorSize
 		return ciphertext, err
 	}
 	return head, encryptStream, nil
