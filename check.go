@@ -88,7 +88,7 @@ func (h V2Header) Check(password string, f *os.File, j V2JSON) (func([]byte) ([]
 		}
 		payloadOffset := int64(-1)
 		payloadSectorSize := V1SectorSize
-		payloadEncryption := "aes-xts-plain64"
+		payloadEncryption := ""
 		payloadSize := int64(0)
 		ivTweak := 0
 		for _, segmentID := range digest.Segments {
@@ -104,8 +104,6 @@ func (h V2Header) Check(password string, f *os.File, j V2JSON) (func([]byte) ([]
 				continue
 			}
 			payloadOffset = tmp
-			payloadSectorSize = segment.SectorSize
-			payloadEncryption = segment.Encryption
 			if segment.Size == "dynamic" {
 				st, err := f.Stat()
 				if err != nil {
@@ -118,9 +116,12 @@ func (h V2Header) Check(password string, f *os.File, j V2JSON) (func([]byte) ([]
 					continue
 				}
 			}
+			payloadSectorSize = segment.SectorSize
+			payloadEncryption = segment.Encryption
 			ivTweak = segment.IVTweak
+			break
 		}
-		if payloadOffset == -1 {
+		if payloadEncryption == "" {
 			continue
 		}
 		activeKeys := 0
