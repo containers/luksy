@@ -86,6 +86,14 @@ function wrapping_cryptsetup() {
     wrapping_cryptsetup --cipher aes-cbc-plain --type luks2
 }
 
+@test wrapping-cryptsetup-aes-cbc-plain64-luks1 {
+    wrapping_cryptsetup --cipher aes-cbc-plain64 --type luks1
+}
+
+@test wrapping-cryptsetup-aes-cbc-plain64-luks2 {
+    wrapping_cryptsetup --cipher aes-cbc-plain64 --type luks2
+}
+
 @test wrapping-cryptsetup-aes-cbc-essiv:sha256-luks1 {
     wrapping_cryptsetup --cipher aes-cbc-essiv:sha256 --type luks1
 }
