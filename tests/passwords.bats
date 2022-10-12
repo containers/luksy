@@ -53,6 +53,14 @@ function passwords_cryptsetup() {
     passwords_cryptsetup --cipher aes-xts-plain64 --type luks2
 }
 
+@test passwords-cryptsetup-aes-cbc-plain-luks1 {
+    passwords_cryptsetup --cipher aes-cbc-plain --type luks1
+}
+
+@test passwords-cryptsetup-aes-cbc-plain-luks2 {
+    passwords_cryptsetup --cipher aes-cbc-plain --type luks2
+}
+
 @test passwords-cryptsetup-aes-cbc-essiv:sha256-luks1 {
     passwords_cryptsetup --cipher aes-cbc-essiv:sha256 --type luks1
 }
