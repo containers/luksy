@@ -41,7 +41,7 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 	case "ecb":
 		cipher, err := newBlockCipher(key)
 		if err != nil {
-			return nil, fmt.Errorf("initializing decryption: %w", err)
+			return nil, fmt.Errorf("initializing encryption: %w", err)
 		}
 		for processed := 0; processed < len(plaintext); processed += cipher.BlockSize() {
 			blockLeft := sectorSize
@@ -53,7 +53,7 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 	case "cbc-plain":
 		block, err := newBlockCipher(key)
 		if err != nil {
-			return nil, fmt.Errorf("initializing decryption: %w", err)
+			return nil, fmt.Errorf("initializing encryption: %w", err)
 		}
 		for processed := 0; processed < len(plaintext); processed += sectorSize {
 			blockLeft := sectorSize
@@ -69,7 +69,7 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 	case "cbc-plain64":
 		block, err := newBlockCipher(key)
 		if err != nil {
-			return nil, fmt.Errorf("initializing decryption: %w", err)
+			return nil, fmt.Errorf("initializing encryption: %w", err)
 		}
 		for processed := 0; processed < len(plaintext); processed += sectorSize {
 			blockLeft := sectorSize
@@ -114,7 +114,7 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 	case "xts-plain":
 		cipher, err := xts.NewCipher(newBlockCipher, key)
 		if err != nil {
-			return nil, fmt.Errorf("initializing decryption: %w", err)
+			return nil, fmt.Errorf("initializing encryption: %w", err)
 		}
 		for processed := 0; processed < len(plaintext); processed += sectorSize {
 			blockLeft := sectorSize
@@ -126,7 +126,7 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 	case "xts-plain64":
 		cipher, err := xts.NewCipher(newBlockCipher, key)
 		if err != nil {
-			return nil, fmt.Errorf("initializing decryption: %w", err)
+			return nil, fmt.Errorf("initializing encryption: %w", err)
 		}
 		for processed := 0; processed < len(plaintext); processed += sectorSize {
 			blockLeft := sectorSize
@@ -218,11 +218,11 @@ func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertex
 		h.Write(key)
 		makeiv, err := newBlockCipher(h.Sum(nil))
 		if err != nil {
-			return nil, fmt.Errorf("initializing encryption: %w", err)
+			return nil, fmt.Errorf("initializing decryption: %w", err)
 		}
 		block, err := newBlockCipher(key)
 		if err != nil {
-			return nil, fmt.Errorf("initializing encryption: %w", err)
+			return nil, fmt.Errorf("initializing decryption: %w", err)
 		}
 		for processed := 0; processed < len(plaintext); processed += sectorSize {
 			blockLeft := sectorSize
