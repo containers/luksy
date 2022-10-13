@@ -61,9 +61,21 @@ func Test_enc_roundtrip(t *testing.T) {
 		{"aes", "cbc-plain", 16, 256},
 		{"aes", "cbc-plain", 16, 2048},
 		{"aes", "cbc-plain", 16, 65536},
+		{"aes", "cbc-plain64", 16, 256},
+		{"aes", "cbc-plain64", 16, 2048},
+		{"aes", "cbc-plain64", 16, 65536},
 		{"aes", "cbc-plain", 32, 256},
 		{"aes", "cbc-plain", 32, 2048},
 		{"aes", "cbc-plain", 32, 65536},
+		{"aes", "cbc-plain64", 32, 256},
+		{"aes", "cbc-plain64", 32, 2048},
+		{"aes", "cbc-plain64", 32, 65536},
+		{"aes", "cbc-essiv:sha256", 32, 256},
+		{"aes", "cbc-essiv:sha256", 32, 2048},
+		{"aes", "cbc-essiv:sha256", 32, 65536},
+		{"aes", "xts-plain", 64, 256},
+		{"aes", "xts-plain", 64, 2048},
+		{"aes", "xts-plain", 64, 65536},
 		{"aes", "xts-plain64", 64, 256},
 		{"aes", "xts-plain64", 64, 2048},
 		{"aes", "xts-plain64", 64, 65536},
@@ -77,9 +89,9 @@ func Test_enc_roundtrip(t *testing.T) {
 			for i := 0; i < len(data); i++ {
 				data[i] = uint8(i & 0xff)
 			}
-			encrypted, err := v1encrypt(testCase.cipher, testCase.mode, 0, key, data)
+			encrypted, err := v1encrypt(testCase.cipher, testCase.mode, 0, key, data, 0, false)
 			require.Nil(t, err, "unexpected error encrypting data")
-			decrypted, err := v1decrypt(testCase.cipher, testCase.mode, 0, key, encrypted)
+			decrypted, err := v1decrypt(testCase.cipher, testCase.mode, 0, key, encrypted, 0, false)
 			require.Nil(t, err, "unexpected error decrypting data")
 			assert.Equal(t, data, decrypted, "data was altered somewhere")
 		})

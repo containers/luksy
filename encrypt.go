@@ -6,18 +6,22 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/pbkdf2"
 )
 
-func EncryptV1(password []string) ([]byte, func([]byte) ([]byte, error), error) {
+func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, error), error) {
 	if len(password) == 0 {
 		return nil, nil, errors.New("at least one password is required")
 	}
 	if len(password) > v1NumKeys {
 		return nil, nil, fmt.Errorf("attempted to use %d passwords, only %d possible", len(password), v1NumKeys)
+	}
+	if cipher == "" {
+		cipher = "aes-xts-plain64"
 	}
 
 	salt := make([]byte, v1SaltSize)
@@ -29,13 +33,21 @@ func EncryptV1(password []string) ([]byte, func([]byte) ([]byte, error), error) 
 		return nil, nil, errors.New("short read")
 	}
 
+	cipherSpec := strings.SplitN(cipher, "-", 3)
+	if len(cipherSpec) != 3 || len(cipherSpec[0]) == 0 || len(cipherSpec[1]) == 0 || len(cipherSpec[2]) == 0 {
+		return nil, nil, fmt.Errorf("invalid cipher %q", cipher)
+	}
+
 	var h V1Header
 	h.SetMagic(V1Magic)
 	h.SetVersion(1)
-	h.SetCipherName("aes")
-	h.SetCipherMode("xts-plain64")
+	h.SetCipherName(cipherSpec[0])
+	h.SetCipherMode(cipherSpec[1] + "-" + cipherSpec[2])
 	h.SetHashSpec("sha256")
-	h.SetKeyBytes(64)
+	h.SetKeyBytes(32)
+	if cipherSpec[1] == "xts" {
+		h.SetKeyBytes(64)
+	}
 	h.SetMKDigestSalt(salt)
 	h.SetMKDigestIter(V1Stripes)
 	h.SetUUID(uuid.NewString())
@@ -113,9 +125,19 @@ func EncryptV1(password []string) ([]byte, func([]byte) ([]byte, error), error) 
 	return head, encryptStream, nil
 }
 
-func EncryptV2(password []string) ([]byte, func([]byte) ([]byte, error), error) {
+func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte, func([]byte) ([]byte, error), error) {
 	if len(password) == 0 {
 		return nil, nil, errors.New("at least one password is required")
+	}
+	if cipher == "" {
+		cipher = "aes-xts-plain64"
+	}
+	cipherSpec := strings.SplitN(cipher, "-", 3)
+	if len(cipherSpec) != 3 || len(cipherSpec[0]) == 0 || len(cipherSpec[1]) == 0 || len(cipherSpec[2]) == 0 {
+		return nil, nil, fmt.Errorf("invalid cipher %q", cipher)
+	}
+	if payloadSectorSize == 0 {
+		payloadSectorSize = V2SectorSize
 	}
 
 	headerSalts := make([]byte, v1SaltSize*3)
@@ -172,9 +194,11 @@ func EncryptV2(password []string) ([]byte, func([]byte) ([]byte, error), error) 
 	h2.SetHeaderOffset(0)
 	h1.SetChecksum(nil)
 	h2.SetChecksum(nil)
-	payloadSectorSize := V2SectorSize
 
-	mkey := make([]byte, 64)
+	mkey := make([]byte, 32)
+	if cipherSpec[1] == "xts" {
+		mkey = make([]byte, 64)
+	}
 	n, err = rand.Read(mkey)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading random data: %w", err)
@@ -221,7 +245,7 @@ func EncryptV2(password []string) ([]byte, func([]byte) ([]byte, error), error) 
 		if err != nil {
 			return nil, nil, fmt.Errorf("splitting: %w", err)
 		}
-		striped, err := v2encrypt("aes-xts-plain64", 0, key, split, V1SectorSize, false)
+		striped, err := v2encrypt(cipher, 0, key, split, V1SectorSize, false)
 		if err != nil {
 			return nil, nil, fmt.Errorf("encrypting: %w", err)
 		}
@@ -234,7 +258,7 @@ func EncryptV2(password []string) ([]byte, func([]byte) ([]byte, error), error) 
 				Offset: 10000000, // gets updated later
 				Size:   int64(len(striped)),
 				V2JSONAreaRaw: &V2JSONAreaRaw{
-					Encryption: "aes-xts-plain64",
+					Encryption: cipher,
 					KeySize:    len(key),
 				},
 			},
@@ -268,7 +292,7 @@ func EncryptV2(password []string) ([]byte, func([]byte) ([]byte, error), error) 
 		Size:   "dynamic",
 		V2JSONSegmentCrypt: &V2JSONSegmentCrypt{
 			IVTweak:    0,
-			Encryption: "aes-xts-plain64",
+			Encryption: cipher,
 			SectorSize: payloadSectorSize,
 		},
 	}
@@ -356,7 +380,7 @@ rebuild:
 	}
 	ivTweak := 0
 	encryptStream := func(plaintext []byte) ([]byte, error) {
-		ciphertext, err := v2encrypt("aes-xts-plain64", ivTweak, mkey, plaintext, payloadSectorSize, true)
+		ciphertext, err := v2encrypt(cipher, ivTweak, mkey, plaintext, payloadSectorSize, true)
 		ivTweak += len(plaintext) / payloadSectorSize
 		return ciphertext, err
 	}

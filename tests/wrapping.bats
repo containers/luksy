@@ -11,26 +11,72 @@ teardown() {
     fi
 }
 
-@test wrapping-defaults {
+function wrapping() {
     dd if=/dev/urandom bs=1M count=64 of=${BATS_TEST_TMPDIR}/plaintext status=none
     for password in short morethaneight morethansixteenchars ; do
-        for luksVersion in "" "--luks1" ; do
-            echo testing password: "${password}" + version: "'${luksVersion}'"
-            echo -n "${password}" | ${lukstool} encrypt --password-fd 0 ${luksVersion} ${BATS_TEST_TMPDIR}/plaintext ${BATS_TEST_TMPDIR}/encrypted
-            uuid=$(cryptsetup luksUUID ${BATS_TEST_TMPDIR}/encrypted)
-            if test -z "$uuid"; then
-                echo error reading UUID
-                false
-            fi
-            echo -n "${password}" | cryptsetup -q --key-file - luksOpen ${BATS_TEST_TMPDIR}/encrypted ${uuid}
-            cmp /dev/mapper/${uuid} ${BATS_TEST_TMPDIR}/plaintext
-            cryptsetup close ${uuid}
-            uuid=
-            rm -f ${BATS_TEST_TMPDIR}/encrypted
-            echo password: "${password}" version: "'${luksVersion}'" ok
-        done
+        echo testing password: "${password}"
+        echo -n "${password}" | ${lukstool} encrypt --password-fd 0 "$@" ${BATS_TEST_TMPDIR}/plaintext ${BATS_TEST_TMPDIR}/encrypted
+        uuid=$(cryptsetup luksUUID ${BATS_TEST_TMPDIR}/encrypted)
+        if test -z "$uuid"; then
+            echo error reading UUID
+            false
+        fi
+        echo -n "${password}" | cryptsetup -q --key-file - luksOpen ${BATS_TEST_TMPDIR}/encrypted ${uuid}
+        cmp /dev/mapper/${uuid} ${BATS_TEST_TMPDIR}/plaintext
+        cryptsetup close ${uuid}
+        uuid=
+        rm -f ${BATS_TEST_TMPDIR}/encrypted
+        echo password: "${password}" ok
     done
     rm -f ${BATS_TEST_TMPDIR}/plaintext
+}
+
+@test wrapping-defaults-luks1 {
+    wrapping --luks1
+}
+
+@test wrapping-defaults-luks2 {
+    wrapping
+}
+
+@test wrapping-aes-xts-plain32-luks1 {
+    wrapping --cipher aes-xts-plain --luks1
+}
+
+@test wrapping-aes-xts-plain32-luks2 {
+    wrapping --cipher aes-xts-plain
+}
+
+@test wrapping-aes-xts-plain64-luks1 {
+    wrapping --cipher aes-xts-plain64 --luks1
+}
+
+@test wrapping-aes-xts-plain64-luks2 {
+    wrapping --cipher aes-xts-plain64
+}
+
+@test wrapping-aes-cbc-plain32-luks1 {
+    wrapping --cipher aes-cbc-plain --luks1
+}
+
+@test wrapping-aes-cbc-plain32-luks2 {
+    wrapping --cipher aes-cbc-plain
+}
+
+@test wrapping-aes-cbc-plain64-luks1 {
+    wrapping --cipher aes-cbc-plain64 --luks1
+}
+
+@test wrapping-aes-cbc-plain64-luks2 {
+    wrapping --cipher aes-cbc-plain64
+}
+
+@test wrapping-aes-cbc-essiv:sha256-luks1 {
+    wrapping --cipher aes-cbc-essiv:sha256 --luks1
+}
+
+@test wrapping-aes-cbc-essiv:sha256-luks2 {
+    wrapping --cipher aes-cbc-essiv:sha256
 }
 
 function wrapping_cryptsetup() {

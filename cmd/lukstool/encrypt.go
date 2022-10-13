@@ -16,6 +16,8 @@ import (
 var (
 	encryptPasswordFd   = -1
 	encryptPasswordFile = ""
+	encryptSectorSize   = 0
+	encryptCipher       = ""
 	encryptv1           = false
 )
 
@@ -35,6 +37,8 @@ func init() {
 	flags.IntVar(&encryptPasswordFd, "password-fd", -1, "read password from file descriptor")
 	flags.StringVar(&encryptPasswordFile, "password-file", "", "read password from file")
 	flags.BoolVarP(&encryptv1, "luks1", "1", false, "create LUKSv1 instead of LUKSv2")
+	flags.IntVar(&encryptSectorSize, "sector-size", 0, "sector size for LUKSv2")
+	flags.StringVarP(&encryptCipher, "cipher", "c", "", "encryption algorithm")
 	rootCmd.AddCommand(encryptCommand)
 }
 
@@ -86,12 +90,12 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 	var header []byte
 	var encryptStream func([]byte) ([]byte, error)
 	if encryptv1 {
-		header, encryptStream, err = lukstool.EncryptV1([]string{password})
+		header, encryptStream, err = lukstool.EncryptV1([]string{password}, encryptCipher)
 		if err != nil {
 			return fmt.Errorf("creating luksv1 data: %w", err)
 		}
 	} else {
-		header, encryptStream, err = lukstool.EncryptV2([]string{password})
+		header, encryptStream, err = lukstool.EncryptV2([]string{password}, encryptCipher, encryptSectorSize)
 		if err != nil {
 			return fmt.Errorf("creating luksv2 data: %w", err)
 		}
