@@ -36,6 +36,14 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 	default:
 		return nil, fmt.Errorf("unsupported cipher %s", cipherName)
 	}
+	if sectorSize == 0 {
+		sectorSize = V1SectorSize
+	}
+	switch sectorSize {
+	default:
+		return nil, fmt.Errorf("invalid sector size %d", sectorSize)
+	case 512, 1024, 2048, 4096:
+	}
 
 	switch cipherMode {
 	case "ecb":
@@ -179,6 +187,14 @@ func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertex
 		newBlockCipher = serpent.NewCipher
 	default:
 		return nil, fmt.Errorf("unsupported cipher %s", cipherName)
+	}
+	if sectorSize == 0 {
+		sectorSize = V1SectorSize
+	}
+	switch sectorSize {
+	default:
+		return nil, fmt.Errorf("invalid sector size %d", sectorSize)
+	case 512, 1024, 2048, 4096:
 	}
 
 	switch cipherMode {
