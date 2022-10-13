@@ -13,7 +13,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:  "lukstool",
-	Long: "A tool for examining and modifying LUKS-encrypted disk images",
+	Long: "A tool for creating and decrypting LUKS-encrypted disk images",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},

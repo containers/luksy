@@ -13,27 +13,27 @@ import (
 )
 
 var (
-	checkPasswordFd = -1
+	decryptPasswordFd = -1
 )
 
 func init() {
-	checkpwCommand := &cobra.Command{
-		Use:   "checkpw",
-		Short: "Check a password for a LUKS-formatted file or device",
+	decryptCommand := &cobra.Command{
+		Use:   "decrypt",
+		Short: "Check a password for a LUKS-formatted file or device, and decrypt it",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return checkpwCmd(cmd, args)
+			return decryptCmd(cmd, args)
 		},
 		Args:    cobra.RangeArgs(1, 2),
-		Example: `lukstool checkpw /dev/mapper/encrypted-lv [plaintext.img]`,
+		Example: `lukstool decrypt /dev/mapper/encrypted-lv [plaintext.img]`,
 	}
 
-	flags := checkpwCommand.Flags()
+	flags := decryptCommand.Flags()
 	flags.SetInterspersed(false)
-	flags.IntVar(&checkPasswordFd, "password-fd", -1, "read password from file descriptor")
-	rootCmd.AddCommand(checkpwCommand)
+	flags.IntVar(&decryptPasswordFd, "password-fd", -1, "read password from file descriptor")
+	rootCmd.AddCommand(decryptCommand)
 }
 
-func checkpwCmd(cmd *cobra.Command, args []string) error {
+func decryptCmd(cmd *cobra.Command, args []string) error {
 	input, err := os.Open(args[0])
 	if err != nil {
 		return err
@@ -47,11 +47,11 @@ func checkpwCmd(cmd *cobra.Command, args []string) error {
 		v2header, v2header2 = v2header2, v2header
 	}
 	var password string
-	if checkPasswordFd != -1 {
-		f := os.NewFile(uintptr(checkPasswordFd), fmt.Sprintf("FD %d", checkPasswordFd))
+	if decryptPasswordFd != -1 {
+		f := os.NewFile(uintptr(decryptPasswordFd), fmt.Sprintf("FD %d", decryptPasswordFd))
 		passBytes, err := io.ReadAll(f)
 		if err != nil {
-			return fmt.Errorf("reading from descriptor %d: %w", checkPasswordFd, err)
+			return fmt.Errorf("reading from descriptor %d: %w", decryptPasswordFd, err)
 		}
 		password = string(passBytes)
 	} else {
@@ -76,9 +76,9 @@ func checkpwCmd(cmd *cobra.Command, args []string) error {
 	var payloadOffset, payloadSize int64
 	switch {
 	case v1header != nil:
-		decryptStream, payloadOffset, payloadSize, err = v1header.Check(password, input)
+		decryptStream, payloadOffset, payloadSize, err = v1header.Decrypt(password, input)
 	case v2header != nil:
-		decryptStream, payloadOffset, payloadSize, err = v2header.Check(password, input, *v2json)
+		decryptStream, payloadOffset, payloadSize, err = v2header.Decrypt(password, input, *v2json)
 	default:
 		err = errors.New("internal error: unknown format")
 	}

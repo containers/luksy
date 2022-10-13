@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-func (h V1Header) Check(password string, f *os.File) (func([]byte) ([]byte, error), int64, int64, error) {
+func (h V1Header) Decrypt(password string, f *os.File) (func([]byte) ([]byte, error), int64, int64, error) {
 	st, err := f.Stat()
 	if err != nil {
 		return nil, -1, -1, err
@@ -73,7 +73,7 @@ func (h V1Header) Check(password string, f *os.File) (func([]byte) ([]byte, erro
 	return nil, -1, -1, errors.New("decryption error: incorrect password")
 }
 
-func (h V2Header) Check(password string, f *os.File, j V2JSON) (func([]byte) ([]byte, error), int64, int64, error) {
+func (h V2Header) Decrypt(password string, f *os.File, j V2JSON) (func([]byte) ([]byte, error), int64, int64, error) {
 	foundDigests := 0
 	for d, digest := range j.Digests {
 		if digest.Type != "pbkdf2" {

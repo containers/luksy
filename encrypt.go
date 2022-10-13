@@ -12,7 +12,7 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-func CreateV1(password []string) ([]byte, func([]byte) ([]byte, error), error) {
+func EncryptV1(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 	if len(password) == 0 {
 		return nil, nil, errors.New("at least one password is required")
 	}
@@ -113,7 +113,7 @@ func CreateV1(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 	return head, encryptStream, nil
 }
 
-func CreateV2(password []string) ([]byte, func([]byte) ([]byte, error), error) {
+func EncryptV2(password []string) ([]byte, func([]byte) ([]byte, error), error) {
 	if len(password) == 0 {
 		return nil, nil, errors.New("at least one password is required")
 	}

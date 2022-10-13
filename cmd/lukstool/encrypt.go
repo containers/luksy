@@ -13,29 +13,29 @@ import (
 )
 
 var (
-	createPasswordFd = -1
-	createv1         = false
+	encryptPasswordFd = -1
+	encryptv1         = false
 )
 
 func init() {
-	createCommand := &cobra.Command{
-		Use:   "create",
+	encryptCommand := &cobra.Command{
+		Use:   "encrypt",
 		Short: "Create a LUKS-formatted file or device",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return createCmd(cmd, args)
+			return encryptCmd(cmd, args)
 		},
 		Args:    cobra.ExactArgs(2),
-		Example: `lukstool create /tmp/plaintext.img /tmp/encrypted.img`,
+		Example: `lukstool encrypt /tmp/plaintext.img /tmp/encrypted.img`,
 	}
 
-	flags := createCommand.Flags()
+	flags := encryptCommand.Flags()
 	flags.SetInterspersed(false)
-	flags.IntVar(&createPasswordFd, "password-fd", -1, "read password from file descriptor")
-	flags.BoolVarP(&createv1, "luks1", "1", false, "create LUKSv1 instead of LUKSv2")
-	rootCmd.AddCommand(createCommand)
+	flags.IntVar(&encryptPasswordFd, "password-fd", -1, "read password from file descriptor")
+	flags.BoolVarP(&encryptv1, "luks1", "1", false, "create LUKSv1 instead of LUKSv2")
+	rootCmd.AddCommand(encryptCommand)
 }
 
-func createCmd(cmd *cobra.Command, args []string) error {
+func encryptCmd(cmd *cobra.Command, args []string) error {
 	input, err := os.Open(args[0])
 	if err != nil {
 		return fmt.Errorf("open %q: %w", args[0], err)
@@ -49,11 +49,11 @@ func createCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%q is not of a suitable size, expected a multiple of %d bytes", input.Name(), lukstool.V1SectorSize)
 	}
 	var password string
-	if createPasswordFd != -1 {
-		passFile := os.NewFile(uintptr(createPasswordFd), fmt.Sprintf("FD %d", createPasswordFd))
+	if encryptPasswordFd != -1 {
+		passFile := os.NewFile(uintptr(encryptPasswordFd), fmt.Sprintf("FD %d", encryptPasswordFd))
 		passBytes, err := io.ReadAll(passFile)
 		if err != nil {
-			return fmt.Errorf("reading from descriptor %d: %w", createPasswordFd, err)
+			return fmt.Errorf("reading from descriptor %d: %w", encryptPasswordFd, err)
 		}
 		password = string(passBytes)
 	} else {
@@ -76,13 +76,13 @@ func createCmd(cmd *cobra.Command, args []string) error {
 	}
 	var header []byte
 	var encryptStream func([]byte) ([]byte, error)
-	if createv1 {
-		header, encryptStream, err = lukstool.CreateV1([]string{password})
+	if encryptv1 {
+		header, encryptStream, err = lukstool.EncryptV1([]string{password})
 		if err != nil {
 			return fmt.Errorf("creating luksv1 data: %w", err)
 		}
 	} else {
-		header, encryptStream, err = lukstool.CreateV2([]string{password})
+		header, encryptStream, err = lukstool.EncryptV2([]string{password})
 		if err != nil {
 			return fmt.Errorf("creating luksv2 data: %w", err)
 		}
