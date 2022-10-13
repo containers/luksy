@@ -20,12 +20,20 @@ function passwords() {
     passwords
 }
 
+@test passwords-defaults-luks2-512 {
+    passwords --sector-size 512
+}
+
 @test passwords-aes-xts-plain32-luks1 {
     passwords --cipher aes-xts-plain --luks1
 }
 
 @test passwords-aes-xts-plain32-luks2 {
     passwords --cipher aes-xts-plain
+}
+
+@test passwords-aes-xts-plain32-luks2-512 {
+    passwords --cipher aes-xts-plain --sector-size 512
 }
 
 @test passwords-aes-xts-plain64-luks1 {
@@ -36,12 +44,20 @@ function passwords() {
     passwords --cipher aes-xts-plain64
 }
 
+@test passwords-aes-xts-plain64-luks2-512 {
+    passwords --cipher aes-xts-plain64 --sector-size 512
+}
+
 @test passwords-aes-cbc-plain32-luks1 {
     passwords --cipher aes-cbc-plain --luks1
 }
 
 @test passwords-aes-cbc-plain32-luks2 {
     passwords --cipher aes-cbc-plain
+}
+
+@test passwords-aes-cbc-plain32-luks2-512 {
+    passwords --cipher aes-cbc-plain --sector-size 512
 }
 
 @test passwords-aes-cbc-plain64-luks1 {
@@ -52,12 +68,20 @@ function passwords() {
     passwords --cipher aes-cbc-plain64
 }
 
+@test passwords-aes-cbc-plain64-luks2-512 {
+    passwords --cipher aes-cbc-plain64 --sector-size 512
+}
+
 @test passwords-aes-cbc-essiv:sha256-luks1 {
     passwords --cipher aes-cbc-essiv:sha256 --luks1
 }
 
 @test passwords-aes-cbc-essiv:sha256-luks2 {
     passwords --cipher aes-cbc-essiv:sha256
+}
+
+@test passwords-aes-cbc-essiv:sha256-luks2-512 {
+    passwords --cipher aes-cbc-essiv:sha256 --sector-size 512
 }
 
 function passwords_cryptsetup() {
