@@ -45,7 +45,7 @@ func (h V1Header) Decrypt(password string, f *os.File) (func([]byte) ([]byte, er
 		if n != len(striped) {
 			return nil, -1, -1, fmt.Errorf("short read while reading diffuse material for keyslot %d: expected %d, got %d", k, len(striped), n)
 		}
-		splitKey, err := v1decrypt(h.CipherName(), h.CipherMode(), 0, passwordDerived, striped, V1SectorSize)
+		splitKey, err := v1decrypt(h.CipherName(), h.CipherMode(), 0, passwordDerived, striped, V1SectorSize, false)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error attempting to decrypt main key: %v\n", err)
 			continue
@@ -58,7 +58,7 @@ func (h V1Header) Decrypt(password string, f *os.File) (func([]byte) ([]byte, er
 		mkcandidateDerived := pbkdf2.Key(mkCandidate, h.MKDigestSalt(), int(h.MKDigestIter()), v1DigestSize, hasher)
 		ivTweak := 0
 		decryptStream := func(ciphertext []byte) ([]byte, error) {
-			plaintext, err := v1decrypt(h.CipherName(), h.CipherMode(), ivTweak, mkCandidate, ciphertext, V1SectorSize)
+			plaintext, err := v1decrypt(h.CipherName(), h.CipherMode(), ivTweak, mkCandidate, ciphertext, V1SectorSize, false)
 			ivTweak += len(ciphertext) / V1SectorSize
 			return plaintext, err
 		}
@@ -192,7 +192,7 @@ func (h V2Header) Decrypt(password string, f *os.File, j V2JSON) (func([]byte) (
 			if n != len(striped) {
 				return nil, -1, -1, fmt.Errorf("short read while reading diffuse material for keyslot %q: expected %d, got %d", k, len(striped), n)
 			}
-			splitKey, err := v2decrypt(keyslot.Area.Encryption, 0, passwordDerived, striped, V1SectorSize)
+			splitKey, err := v2decrypt(keyslot.Area.Encryption, 0, passwordDerived, striped, V1SectorSize, false)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error attempting to decrypt main key: %v\n", err)
 				continue
@@ -212,7 +212,7 @@ func (h V2Header) Decrypt(password string, f *os.File, j V2JSON) (func([]byte) (
 			}
 			mkcandidateDerived := pbkdf2.Key(mkCandidate, digest.Salt, digest.Iterations, len(digest.Digest), digester)
 			decryptStream := func(ciphertext []byte) ([]byte, error) {
-				plaintext, err := v2decrypt(payloadEncryption, ivTweak, mkCandidate, ciphertext, payloadSectorSize)
+				plaintext, err := v2decrypt(payloadEncryption, ivTweak, mkCandidate, ciphertext, payloadSectorSize, true)
 				ivTweak += len(ciphertext) / payloadSectorSize
 				return plaintext, err
 			}

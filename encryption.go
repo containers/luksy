@@ -145,7 +145,7 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 	return ciphertext, nil
 }
 
-func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertext []byte, sectorSize int) ([]byte, error) {
+func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertext []byte, sectorSize int, bulk bool) ([]byte, error) {
 	var err error
 	var newBlockCipher func([]byte) (cipher.Block, error)
 	plaintext := make([]byte, len(ciphertext))
@@ -187,6 +187,9 @@ func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertex
 				blockLeft = len(plaintext) - processed
 			}
 			ivValue := processed/sectorSize + ivTweak
+			if bulk {
+				ivValue *= sectorSize / V1SectorSize
+			}
 			iv0 := make([]byte, block.BlockSize())
 			binary.LittleEndian.PutUint32(iv0, uint32(ivValue))
 			cipher := cipher.NewCBCDecrypter(block, iv0)
@@ -203,6 +206,9 @@ func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertex
 				blockLeft = len(plaintext) - processed
 			}
 			ivValue := processed/sectorSize + ivTweak
+			if bulk {
+				ivValue *= sectorSize / V1SectorSize
+			}
 			iv0 := make([]byte, block.BlockSize())
 			binary.LittleEndian.PutUint64(iv0, uint64(ivValue))
 			cipher := cipher.NewCBCDecrypter(block, iv0)
@@ -230,6 +236,9 @@ func v1decrypt(cipherName, cipherMode string, ivTweak int, key []byte, ciphertex
 				blockLeft = len(plaintext) - processed
 			}
 			ivValue := (processed/sectorSize + ivTweak)
+			if bulk {
+				ivValue *= sectorSize / V1SectorSize
+			}
 			plain0 := make([]byte, makeiv.BlockSize())
 			binary.LittleEndian.PutUint64(plain0, uint64(ivValue))
 			iv0 := make([]byte, makeiv.BlockSize())
@@ -285,7 +294,7 @@ func v2encrypt(cipherSuite string, ivTweak int, key []byte, ciphertext []byte, s
 	return v1encrypt(cipherName, cipherMode, ivTweak, key, ciphertext, sectorSize)
 }
 
-func v2decrypt(cipherSuite string, ivTweak int, key []byte, ciphertext []byte, sectorSize int) ([]byte, error) {
+func v2decrypt(cipherSuite string, ivTweak int, key []byte, ciphertext []byte, sectorSize int, bulk bool) ([]byte, error) {
 	var cipherName, cipherMode string
 	switch {
 	default:
@@ -296,7 +305,7 @@ func v2decrypt(cipherSuite string, ivTweak int, key []byte, ciphertext []byte, s
 		cipherName = cipherSpec[0]
 		cipherMode = cipherSpec[1]
 	}
-	return v1decrypt(cipherName, cipherMode, ivTweak, key, ciphertext, sectorSize)
+	return v1decrypt(cipherName, cipherMode, ivTweak, key, ciphertext, sectorSize, bulk)
 }
 
 func diffuse(key []byte, h hash.Hash) []byte {
