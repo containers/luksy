@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 
 	"github.com/nalind/lukstool"
@@ -13,7 +14,8 @@ import (
 )
 
 var (
-	decryptPasswordFd = -1
+	decryptPasswordFd   = -1
+	decryptPasswordFile = ""
 )
 
 func init() {
@@ -30,6 +32,7 @@ func init() {
 	flags := decryptCommand.Flags()
 	flags.SetInterspersed(false)
 	flags.IntVar(&decryptPasswordFd, "password-fd", -1, "read password from file descriptor")
+	flags.StringVar(&decryptPasswordFile, "password-file", "", "read password from file")
 	rootCmd.AddCommand(decryptCommand)
 }
 
@@ -52,6 +55,12 @@ func decryptCmd(cmd *cobra.Command, args []string) error {
 		passBytes, err := io.ReadAll(f)
 		if err != nil {
 			return fmt.Errorf("reading from descriptor %d: %w", decryptPasswordFd, err)
+		}
+		password = string(passBytes)
+	} else if decryptPasswordFile != "" {
+		passBytes, err := ioutil.ReadFile(decryptPasswordFile)
+		if err != nil {
+			return err
 		}
 		password = string(passBytes)
 	} else {

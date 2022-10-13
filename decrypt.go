@@ -83,7 +83,7 @@ func (h V2Header) Decrypt(password string, f *os.File, j V2JSON) (func([]byte) (
 			return nil, -1, -1, fmt.Errorf("digest %q is corrupt: no pbkdf2 parameters", d)
 		}
 		foundDigests++
-		if len(digest.Segments) == 0 {
+		if len(digest.Segments) == 0 || len(digest.Digest) == 0 {
 			continue
 		}
 		payloadOffset := int64(-1)

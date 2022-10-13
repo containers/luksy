@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 
 	"github.com/nalind/lukstool"
@@ -13,8 +14,9 @@ import (
 )
 
 var (
-	encryptPasswordFd = -1
-	encryptv1         = false
+	encryptPasswordFd   = -1
+	encryptPasswordFile = ""
+	encryptv1           = false
 )
 
 func init() {
@@ -31,6 +33,7 @@ func init() {
 	flags := encryptCommand.Flags()
 	flags.SetInterspersed(false)
 	flags.IntVar(&encryptPasswordFd, "password-fd", -1, "read password from file descriptor")
+	flags.StringVar(&encryptPasswordFile, "password-file", "", "read password from file")
 	flags.BoolVarP(&encryptv1, "luks1", "1", false, "create LUKSv1 instead of LUKSv2")
 	rootCmd.AddCommand(encryptCommand)
 }
@@ -54,6 +57,12 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 		passBytes, err := io.ReadAll(passFile)
 		if err != nil {
 			return fmt.Errorf("reading from descriptor %d: %w", encryptPasswordFd, err)
+		}
+		password = string(passBytes)
+	} else if encryptPasswordFile != "" {
+		passBytes, err := ioutil.ReadFile(encryptPasswordFile)
+		if err != nil {
+			return err
 		}
 		password = string(passBytes)
 	} else {
