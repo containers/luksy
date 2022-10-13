@@ -118,7 +118,7 @@ func v1encrypt(cipherName, cipherMode string, ivTweak int, key []byte, plaintext
 			iv0 := make([]byte, makeiv.BlockSize())
 			makeiv.Encrypt(iv0, plain0)
 			cipher := cipher.NewCBCEncrypter(block, iv0)
-			cipher.CryptBlocks(plaintext[processed:processed+blockLeft], ciphertext[processed:processed+blockLeft])
+			cipher.CryptBlocks(ciphertext[processed:processed+blockLeft], plaintext[processed:processed+blockLeft])
 		}
 	case "xts-plain":
 		cipher, err := xts.NewCipher(newBlockCipher, key)

@@ -139,6 +139,11 @@ func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte,
 	if payloadSectorSize == 0 {
 		payloadSectorSize = V2SectorSize
 	}
+	switch payloadSectorSize {
+	default:
+		return nil, nil, fmt.Errorf("invalid sector size %d", payloadSectorSize)
+	case 512, 1024, 2048, 4096:
+	}
 
 	headerSalts := make([]byte, v1SaltSize*3)
 	n, err := rand.Read(headerSalts)
