@@ -192,7 +192,7 @@ func (h V2Header) Decrypt(password string, f *os.File, j V2JSON) (func([]byte) (
 			if n != len(striped) {
 				return nil, -1, -1, fmt.Errorf("short read while reading diffuse material for keyslot %q: expected %d, got %d", k, len(striped), n)
 			}
-			splitKey, err := v2decrypt("aes-xts-plain64", 0, passwordDerived, striped, V1SectorSize)
+			splitKey, err := v2decrypt(keyslot.Area.Encryption, 0, passwordDerived, striped, V1SectorSize)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "error attempting to decrypt main key: %v\n", err)
 				continue
