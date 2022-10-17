@@ -14,11 +14,11 @@ import (
 )
 
 var (
-	encryptPasswordFd   = -1
-	encryptPasswordFile = ""
-	encryptSectorSize   = 0
-	encryptCipher       = ""
-	encryptv1           = false
+	encryptPasswordFds   = []int{}
+	encryptPasswordFiles = []string{}
+	encryptSectorSize    = 0
+	encryptCipher        = ""
+	encryptv1            = false
 )
 
 func init() {
@@ -34,8 +34,8 @@ func init() {
 
 	flags := encryptCommand.Flags()
 	flags.SetInterspersed(false)
-	flags.IntVar(&encryptPasswordFd, "password-fd", -1, "read password from file descriptor")
-	flags.StringVar(&encryptPasswordFile, "password-file", "", "read password from file")
+	flags.IntSliceVar(&encryptPasswordFds, "password-fd", nil, "read password from file descriptor `number`s")
+	flags.StringSliceVar(&encryptPasswordFiles, "password-file", nil, "read password from `file`s")
 	flags.BoolVarP(&encryptv1, "luks1", "1", false, "create LUKSv1 instead of LUKSv2")
 	flags.IntVar(&encryptSectorSize, "sector-size", 0, "sector size for LUKSv2")
 	flags.StringVarP(&encryptCipher, "cipher", "c", "", "encryption algorithm")
@@ -55,21 +55,23 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 	if st.Size()%lukstool.V1SectorSize != 0 {
 		return fmt.Errorf("%q is not of a suitable size, expected a multiple of %d bytes", input.Name(), lukstool.V1SectorSize)
 	}
-	var password string
-	if encryptPasswordFd != -1 {
+	var passwords []string
+	for _, encryptPasswordFd := range encryptPasswordFds {
 		passFile := os.NewFile(uintptr(encryptPasswordFd), fmt.Sprintf("FD %d", encryptPasswordFd))
 		passBytes, err := io.ReadAll(passFile)
 		if err != nil {
 			return fmt.Errorf("reading from descriptor %d: %w", encryptPasswordFd, err)
 		}
-		password = string(passBytes)
-	} else if encryptPasswordFile != "" {
+		passwords = append(passwords, string(passBytes))
+	}
+	for _, encryptPasswordFile := range encryptPasswordFiles {
 		passBytes, err := ioutil.ReadFile(encryptPasswordFile)
 		if err != nil {
 			return err
 		}
-		password = string(passBytes)
-	} else {
+		passwords = append(passwords, string(passBytes))
+	}
+	if len(passwords) == 0 {
 		if terminal.IsTerminal(unix.Stdin) {
 			fmt.Fprintf(os.Stdout, "Password: ")
 			os.Stdout.Sync()
@@ -77,25 +79,25 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return fmt.Errorf("reading from stdin: %w", err)
 			}
-			password = string(passBytes)
+			passwords = append(passwords, string(passBytes))
 			fmt.Fprintln(os.Stdout)
 		} else {
 			passBytes, err := io.ReadAll(os.Stdin)
 			if err != nil {
 				return fmt.Errorf("reading from stdin: %w", err)
 			}
-			password = string(passBytes)
+			passwords = append(passwords, string(passBytes))
 		}
 	}
 	var header []byte
 	var encryptStream func([]byte) ([]byte, error)
 	if encryptv1 {
-		header, encryptStream, err = lukstool.EncryptV1([]string{password}, encryptCipher)
+		header, encryptStream, err = lukstool.EncryptV1(passwords, encryptCipher)
 		if err != nil {
 			return fmt.Errorf("creating luksv1 data: %w", err)
 		}
 	} else {
-		header, encryptStream, err = lukstool.EncryptV2([]string{password}, encryptCipher, encryptSectorSize)
+		header, encryptStream, err = lukstool.EncryptV2(passwords, encryptCipher, encryptSectorSize)
 		if err != nil {
 			return fmt.Errorf("creating luksv2 data: %w", err)
 		}
