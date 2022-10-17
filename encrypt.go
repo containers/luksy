@@ -13,6 +13,11 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
+// EncryptV1 prepares to encrypt data using one or more passwords and the
+// specified cipher (or a default, if the specified cipher is "").
+//
+// Returns a fixed LUKSv1 header which contains keying information, and a
+// function which will encrypt blocks of data in succession.
 func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, error), error) {
 	if len(password) == 0 {
 		return nil, nil, errors.New("at least one password is required")
@@ -125,6 +130,11 @@ func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, 
 	return head, encryptStream, nil
 }
 
+// EncryptV2 prepares to encrypt data using one or more passwords and the
+// specified cipher (or a default, if the specified cipher is "").
+//
+// Returns a fixed LUKSv2 header which contains keying information, and a
+// function which will encrypt blocks of data in succession.
 func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte, func([]byte) ([]byte, error), error) {
 	if len(password) == 0 {
 		return nil, nil, errors.New("at least one password is required")

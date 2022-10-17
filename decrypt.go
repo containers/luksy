@@ -11,6 +11,11 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
+// Decrypt attempts to verify the specified password using information from the
+// header and read from the specified file.
+//
+// Returns a function which will decrypt payload blocks in succession, the
+// offset in the file where the payload begins, and the size of the payload.
 func (h V1Header) Decrypt(password string, f *os.File) (func([]byte) ([]byte, error), int64, int64, error) {
 	st, err := f.Stat()
 	if err != nil {
@@ -73,6 +78,11 @@ func (h V1Header) Decrypt(password string, f *os.File) (func([]byte) ([]byte, er
 	return nil, -1, -1, errors.New("decryption error: incorrect password")
 }
 
+// Decrypt attempts to verify the specified password using information from the
+// header, JSON block, and read from the specified file.
+//
+// Returns a function which will decrypt payload blocks in succession, the
+// offset in the file where the payload begins, and the size of the payload.
 func (h V2Header) Decrypt(password string, f *os.File, j V2JSON) (func([]byte) ([]byte, error), int64, int64, error) {
 	foundDigests := 0
 	for d, digest := range j.Digests {

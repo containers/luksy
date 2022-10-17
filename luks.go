@@ -7,9 +7,13 @@ import (
 	"os"
 )
 
+// ReadHeaderOptions can control some of what ReadHeaders() does.
 type ReadHeaderOptions struct {
 }
 
+// ReadHeaders reads LUKS headers from the specified file, returning either a
+// LUKSv1 header, or two LUKSv2 headers and a LUKSv2 JSON block, depending on
+// which format is detected.
 func ReadHeaders(f *os.File, options ReadHeaderOptions) (*V1Header, *V2Header, *V2Header, *V2JSON, error) {
 	var v1 V1Header
 	var v2a, v2b V2Header
