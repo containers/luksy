@@ -14,6 +14,11 @@ import (
 	"golang.org/x/crypto/ripemd160"
 )
 
+func Test_HeaderSizes(t *testing.T) {
+	assert.Equal(t, 592, v1HeaderStructSize, "BUG: v1 header size is off")
+	assert.Equal(t, 4096, v2HeaderStructSize, "BUG: v2 header size is off")
+}
+
 func Test_AFroundtrip(t *testing.T) {
 	type hashmaker func() hash.Hash
 	hashes := map[string]hashmaker{
