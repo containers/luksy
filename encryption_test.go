@@ -88,6 +88,18 @@ func Test_enc_roundtrip(t *testing.T) {
 		{"aes", "xts-plain64", 64, 256},
 		{"aes", "xts-plain64", 64, 2048},
 		{"aes", "xts-plain64", 64, 65536},
+		{"serpent", "xts-plain", 64, 256},
+		{"serpent", "xts-plain", 64, 2048},
+		{"serpent", "xts-plain", 64, 65536},
+		{"serpent", "xts-plain64", 64, 256},
+		{"serpent", "xts-plain64", 64, 2048},
+		{"serpent", "xts-plain64", 64, 65536},
+		{"twofish", "xts-plain", 64, 256},
+		{"twofish", "xts-plain", 64, 2048},
+		{"twofish", "xts-plain", 64, 65536},
+		{"twofish", "xts-plain64", 64, 256},
+		{"twofish", "xts-plain64", 64, 2048},
+		{"twofish", "xts-plain64", 64, 65536},
 	} {
 		t.Run(fmt.Sprintf("%s-%s-%d:%d", testCase.cipher, testCase.mode, testCase.keysize, testCase.datasize), func(t *testing.T) {
 			key := make([]byte, testCase.keysize)

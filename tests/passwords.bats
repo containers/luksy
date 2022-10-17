@@ -74,6 +74,30 @@ function passwords() {
     passwords --cipher aes-xts-plain64 --sector-size 512
 }
 
+@test passwords-serpent-xts-plain64-luks1 {
+    passwords --cipher serpent-xts-plain64 --luks1
+}
+
+@test passwords-serpent-xts-plain64-luks2 {
+    passwords --cipher serpent-xts-plain64
+}
+
+@test passwords-serpent-xts-plain64-luks2-512 {
+    passwords --cipher serpent-xts-plain64 --sector-size 512
+}
+
+@test passwords-twofish-xts-plain64-luks1 {
+    passwords --cipher twofish-xts-plain64 --luks1
+}
+
+@test passwords-twofish-xts-plain64-luks2 {
+    passwords --cipher twofish-xts-plain64
+}
+
+@test passwords-twofish-xts-plain64-luks2-512 {
+    passwords --cipher twofish-xts-plain64 --sector-size 512
+}
+
 @test passwords-aes-cbc-plain32-luks1 {
     passwords --cipher aes-cbc-plain --luks1
 }
@@ -171,6 +195,22 @@ function passwords_cryptsetup() {
 
 @test passwords-cryptsetup-aes-xts-plain64-luks2 {
     passwords_cryptsetup --cipher aes-xts-plain64 --type luks2
+}
+
+@test passwords-cryptsetup-serpent-xts-plain64-luks1 {
+    passwords_cryptsetup --cipher serpent-xts-plain64 --type luks1
+}
+
+@test passwords-cryptsetup-serpent-xts-plain64-luks2 {
+    passwords_cryptsetup --cipher serpent-xts-plain64 --type luks2
+}
+
+@test passwords-cryptsetup-twofish-xts-plain64-luks1 {
+    passwords_cryptsetup --cipher twofish-xts-plain64 --type luks1
+}
+
+@test passwords-cryptsetup-twofish-xts-plain64-luks2 {
+    passwords_cryptsetup --cipher twofish-xts-plain64 --type luks2
 }
 
 @test passwords-cryptsetup-aes-cbc-plain32-luks1 {

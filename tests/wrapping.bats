@@ -55,6 +55,22 @@ function wrapping() {
     wrapping --cipher aes-xts-plain64
 }
 
+@test wrapping-serpent-xts-plain64-luks1 {
+    wrapping --cipher serpent-xts-plain64 --luks1
+}
+
+@test wrapping-serpent-xts-plain64-luks2 {
+    wrapping --cipher serpent-xts-plain64
+}
+
+@test wrapping-twofish-xts-plain64-luks1 {
+    wrapping --cipher twofish-xts-plain64 --luks1
+}
+
+@test wrapping-twofish-xts-plain64-luks2 {
+    wrapping --cipher twofish-xts-plain64
+}
+
 @test wrapping-aes-cbc-plain32-luks1 {
     wrapping --cipher aes-cbc-plain --luks1
 }
@@ -122,6 +138,22 @@ function wrapping_cryptsetup() {
 
 @test wrapping-cryptsetup-aes-xts-plain64-luks2 {
     wrapping_cryptsetup --cipher aes-xts-plain64 --type luks2
+}
+
+@test wrapping-cryptsetup-serpent-xts-plain64-luks1 {
+    wrapping_cryptsetup --cipher serpent-xts-plain64 --type luks1
+}
+
+@test wrapping-cryptsetup-serpent-xts-plain64-luks2 {
+    wrapping_cryptsetup --cipher serpent-xts-plain64 --type luks2
+}
+
+@test wrapping-cryptsetup-twofish-xts-plain64-luks1 {
+    wrapping_cryptsetup --cipher twofish-xts-plain64 --type luks1
+}
+
+@test wrapping-cryptsetup-twofish-xts-plain64-luks2 {
+    wrapping_cryptsetup --cipher twofish-xts-plain64 --type luks2
 }
 
 @test wrapping-cryptsetup-aes-cbc-plain32-luks1 {
