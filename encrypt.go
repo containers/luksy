@@ -114,7 +114,7 @@ func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, 
 	offset = roundUpToMultiple(offset, V1AlignKeyslots)
 	for _, stripe := range stripes {
 		copy(head[offset:], stripe)
-		offset = roundUpToMultiple(offset, V1AlignKeyslots)
+		offset = roundUpToMultiple(offset+len(stripe), V1AlignKeyslots)
 	}
 	ivTweak := 0
 	encryptStream := func(plaintext []byte) ([]byte, error) {
@@ -159,6 +159,8 @@ func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte,
 
 	roundHeaderSize := func(size int) (int, error) {
 		switch {
+		case size < 0x4000:
+			return 0x4000, nil
 		case size < 0x8000:
 			return 0x8000, nil
 		case size < 0x10000:
@@ -212,15 +214,15 @@ func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte,
 		return nil, nil, errors.New("short read")
 	}
 
-	keyslotSalt := make([]byte, v1SaltSize)
+	tuningSalt := make([]byte, v1SaltSize)
 	hasher, err := hasherByName(h1.ChecksumAlgorithm())
 	if err != nil {
 		return nil, nil, errors.New("internal error")
 	}
-	iterations := IterationsPBKDF2(keyslotSalt, len(mkey), hasher)
+	iterations := IterationsPBKDF2(tuningSalt, len(mkey), hasher)
 	timeCost := 1
 	threadsCost := 4
-	memoryCost := MemoryCostArgon2(keyslotSalt, len(mkey), timeCost, threadsCost)
+	memoryCost := MemoryCostArgon2(tuningSalt, len(mkey), timeCost, threadsCost)
 	priority := V2JSONKeyslotPriorityNormal
 	var stripes [][]byte
 	var keyslots []V2JSONKeyslot
@@ -238,6 +240,7 @@ func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte,
 	}
 
 	for i := range password {
+		keyslotSalt := make([]byte, v1SaltSize)
 		n, err := rand.Read(keyslotSalt)
 		if err != nil {
 			return nil, nil, err
@@ -261,7 +264,7 @@ func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte,
 			Area: V2JSONArea{
 				Type:   "raw",
 				Offset: 10000000, // gets updated later
-				Size:   int64(len(striped)),
+				Size:   int64(roundUpToMultiple(len(striped), V2AlignKeyslots)),
 				V2JSONAreaRaw: &V2JSONAreaRaw{
 					Encryption: cipher,
 					KeySize:    len(key),
