@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -92,12 +91,12 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 	var header []byte
 	var encryptStream func([]byte) ([]byte, error)
 	if encryptv1 {
-		header, encryptStream, err = lukstool.EncryptV1(passwords, encryptCipher)
+		header, encryptStream, encryptSectorSize, err = lukstool.EncryptV1(passwords, encryptCipher)
 		if err != nil {
 			return fmt.Errorf("creating luksv1 data: %w", err)
 		}
 	} else {
-		header, encryptStream, err = lukstool.EncryptV2(passwords, encryptCipher, encryptSectorSize)
+		header, encryptStream, encryptSectorSize, err = lukstool.EncryptV2(passwords, encryptCipher, encryptSectorSize)
 		if err != nil {
 			return fmt.Errorf("creating luksv2 data: %w", err)
 		}
@@ -114,35 +113,8 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 	if n != len(header) {
 		return fmt.Errorf("short write while writing header to %q", output.Name())
 	}
-	buf := make([]byte, 1024*1024)
-	if _, err := input.Seek(0, io.SeekStart); err != nil {
-		return err
-	}
-	for {
-		n, err := input.Read(buf)
-		if err != nil && !errors.Is(err, io.EOF) {
-			return err
-		}
-		encrypted, err := encryptStream(buf[:n])
-		if err != nil {
-			return err
-		}
-		if n == 0 {
-			break
-		}
-		n, err = output.Write(encrypted)
-		if err != nil {
-			return err
-		}
-		if n != len(encrypted) {
-			return fmt.Errorf("short write saving encrypted output: %d < %d", n, len(encrypted))
-		}
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				err = nil
-			}
-			break
-		}
-	}
+	wc := lukstool.EncryptWriter(encryptStream, output, encryptSectorSize)
+	defer wc.Close()
+	_, err = io.Copy(wc, input)
 	return err
 }

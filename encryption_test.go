@@ -7,11 +7,17 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"hash"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ripemd160"
+)
+
+var (
+	_ io.Writer = &wrapper{}
+	_ io.Reader = &wrapper{}
 )
 
 func Test_HeaderSizes(t *testing.T) {

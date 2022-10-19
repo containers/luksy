@@ -8,8 +8,10 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"hash"
+	"io"
 	"strings"
 
 	"github.com/aead/serpent"
@@ -431,4 +433,104 @@ func hasherByName(name string) (func() hash.Hash, error) {
 	default:
 		return nil, fmt.Errorf("unsupported digest algorithm %q", name)
 	}
+}
+
+type wrapper struct {
+	fn                 func(plaintext []byte) ([]byte, error)
+	blockSize          int
+	buf                []byte
+	buffered, consumed int
+	reader             io.Reader
+	eof                bool
+	writer             io.Writer
+}
+
+func (w *wrapper) Write(buf []byte) (int, error) {
+	n := 0
+	for n < len(buf) {
+		nBuffered := copy(w.buf[w.buffered:], buf[n:])
+		w.buffered += nBuffered
+		n += nBuffered
+		if w.buffered == len(w.buf) {
+			processed, err := w.fn(w.buf)
+			if err != nil {
+				return n, err
+			}
+			nWritten, err := w.writer.Write(processed)
+			if err != nil {
+				return n, err
+			}
+			w.buffered -= nWritten
+			if nWritten != len(processed) {
+				return n, fmt.Errorf("short write: %d != %d", nWritten, len(processed))
+			}
+		}
+	}
+	return n, nil
+}
+
+func (w *wrapper) Read(buf []byte) (int, error) {
+	n := 0
+	for n < len(buf) {
+		nRead := copy(buf[n:], w.buf[w.consumed:])
+		w.consumed += nRead
+		n += nRead
+		if w.consumed == len(w.buf) && !w.eof {
+			nRead, err := w.reader.Read(w.buf)
+			w.eof = errors.Is(err, io.EOF)
+			if err != nil && !w.eof {
+				return n, err
+			}
+			if nRead != len(w.buf) && !w.eof {
+				return n, fmt.Errorf("short read: %d != %d", nRead, len(w.buf))
+			}
+			processed, err := w.fn(w.buf[:nRead])
+			if err != nil {
+				return n, err
+			}
+			w.buf = processed
+			w.consumed = 0
+		}
+	}
+	var eof error
+	if w.consumed == len(w.buf) && w.eof {
+		eof = io.EOF
+	}
+	return n, eof
+}
+
+func (w *wrapper) Close() error {
+	if w.writer != nil && w.buffered != 0 {
+		if w.buffered%w.blockSize != 0 {
+			w.buffered += copy(w.buf[w.buffered:], make([]byte, roundUpToMultiple(w.buffered%w.blockSize, w.blockSize)))
+		}
+		processed, err := w.fn(w.buf[:w.buffered])
+		if err != nil {
+			return err
+		}
+		nWritten, err := w.writer.Write(processed)
+		if err != nil {
+			return err
+		}
+		if nWritten != len(processed) {
+			return fmt.Errorf("short write: %d != %d", nWritten, len(processed))
+		}
+		w.buffered = 0
+	}
+	return nil
+}
+
+// EncryptWriter creates an io.WriteCloser which buffers writes through an
+// encryption function.  After writing a final block, the writer should be
+// closed.
+func EncryptWriter(fn func(plaintext []byte) ([]byte, error), writer io.WriteCloser, blockSize int) *wrapper {
+	bufferSize := roundUpToMultiple(1024*1024, blockSize)
+	return &wrapper{fn: fn, blockSize: blockSize, buf: make([]byte, bufferSize), writer: writer}
+}
+
+// DecryptReader creates an io.Reader which buffers reads through a decryption
+// function.
+func DecryptReader(fn func(ciphertext []byte) ([]byte, error), reader io.Reader, blockSize int) *wrapper {
+	bufferSize := roundUpToMultiple(1024*1024, blockSize)
+	return &wrapper{fn: fn, blockSize: blockSize, buf: make([]byte, bufferSize), consumed: bufferSize, reader: reader}
 }

@@ -83,11 +83,12 @@ func decryptCmd(cmd *cobra.Command, args []string) error {
 	}
 	var decryptStream func([]byte) ([]byte, error)
 	var payloadOffset, payloadSize int64
+	var decryptSectorSize int
 	switch {
 	case v1header != nil:
-		decryptStream, payloadOffset, payloadSize, err = v1header.Decrypt(password, input)
+		decryptStream, decryptSectorSize, payloadOffset, payloadSize, err = v1header.Decrypt(password, input)
 	case v2header != nil:
-		decryptStream, payloadOffset, payloadSize, err = v2header.Decrypt(password, input, *v2json)
+		decryptStream, decryptSectorSize, payloadOffset, payloadSize, err = v2header.Decrypt(password, input, *v2json)
 	default:
 		err = errors.New("internal error: unknown format")
 	}
@@ -97,35 +98,15 @@ func decryptCmd(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		defer output.Close()
-		buf := make([]byte, 1024*1024)
-		if _, err := input.Seek(payloadOffset, io.SeekStart); err != nil {
+		_, err = input.Seek(payloadOffset, os.SEEK_SET)
+		if err != nil {
 			return err
 		}
-		for payloadSize > 0 {
-			want := payloadSize
-			if want > int64(len(buf)) {
-				want = int64(len(buf))
-			}
-			n, err := input.Read(buf[:want])
-			if err != nil && !errors.Is(err, io.EOF) {
-				return err
-			}
-			if int64(n) != want {
-				return fmt.Errorf("short read: wanted %d bytes, got %d bytes", want, n)
-			}
-			plaintext, err := decryptStream(buf[:want])
-			if err != nil {
-				return err
-			}
-			n, err = output.Write(plaintext[:want])
-			if err != nil {
-				return err
-			}
-			if int64(n) != want {
-				return fmt.Errorf("short write: tried %d bytes, wrote %d bytes", want, n)
-			}
-			payloadSize -= int64(n)
+		reader := io.Reader(lukstool.DecryptReader(decryptStream, input, decryptSectorSize))
+		if payloadSize >= 0 {
+			reader = io.LimitReader(reader, payloadSize)
 		}
+		_, err = io.Copy(output, reader)
 	}
 	return err
 }

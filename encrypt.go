@@ -16,14 +16,15 @@ import (
 // EncryptV1 prepares to encrypt data using one or more passwords and the
 // specified cipher (or a default, if the specified cipher is "").
 //
-// Returns a fixed LUKSv1 header which contains keying information, and a
-// function which will encrypt blocks of data in succession.
-func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, error), error) {
+// Returns a fixed LUKSv1 header which contains keying information, a function
+// which will encrypt blocks of data in succession, and the size of chunks of
+// data that it expects.
+func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, error), int, error) {
 	if len(password) == 0 {
-		return nil, nil, errors.New("at least one password is required")
+		return nil, nil, -1, errors.New("at least one password is required")
 	}
 	if len(password) > v1NumKeys {
-		return nil, nil, fmt.Errorf("attempted to use %d passwords, only %d possible", len(password), v1NumKeys)
+		return nil, nil, -1, fmt.Errorf("attempted to use %d passwords, only %d possible", len(password), v1NumKeys)
 	}
 	if cipher == "" {
 		cipher = "aes-xts-plain64"
@@ -32,15 +33,15 @@ func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, 
 	salt := make([]byte, v1SaltSize)
 	n, err := rand.Read(salt)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading random data: %w", err)
+		return nil, nil, -1, fmt.Errorf("reading random data: %w", err)
 	}
 	if n != len(salt) {
-		return nil, nil, errors.New("short read")
+		return nil, nil, -1, errors.New("short read")
 	}
 
 	cipherSpec := strings.SplitN(cipher, "-", 3)
 	if len(cipherSpec) != 3 || len(cipherSpec[0]) == 0 || len(cipherSpec[1]) == 0 || len(cipherSpec[2]) == 0 {
-		return nil, nil, fmt.Errorf("invalid cipher %q", cipher)
+		return nil, nil, -1, fmt.Errorf("invalid cipher %q", cipher)
 	}
 
 	var h V1Header
@@ -60,15 +61,15 @@ func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, 
 	mkey := make([]byte, h.KeyBytes())
 	n, err = rand.Read(mkey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading random data: %w", err)
+		return nil, nil, -1, fmt.Errorf("reading random data: %w", err)
 	}
 	if n != len(mkey) {
-		return nil, nil, errors.New("short read")
+		return nil, nil, -1, errors.New("short read")
 	}
 
 	hasher, err := hasherByName(h.HashSpec())
 	if err != nil {
-		return nil, nil, errors.New("internal error")
+		return nil, nil, -1, errors.New("internal error")
 	}
 
 	mkdigest := pbkdf2.Key(mkey, h.MKDigestSalt(), int(h.MKDigestIter()), v1DigestSize, hasher)
@@ -81,10 +82,10 @@ func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, 
 	for i := 0; i < v1NumKeys; i++ {
 		n, err = rand.Read(ksSalt)
 		if err != nil {
-			return nil, nil, fmt.Errorf("reading random data: %w", err)
+			return nil, nil, -1, fmt.Errorf("reading random data: %w", err)
 		}
 		if n != len(ksSalt) {
-			return nil, nil, errors.New("short read")
+			return nil, nil, -1, errors.New("short read")
 		}
 		var keyslot V1KeySlot
 		keyslot.SetActive(i < len(password))
@@ -94,15 +95,15 @@ func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, 
 		if i < len(password) {
 			splitKey, err := afSplit(mkey, hasher(), int(h.MKDigestIter()))
 			if err != nil {
-				return nil, nil, fmt.Errorf("splitting key: %w", err)
+				return nil, nil, -1, fmt.Errorf("splitting key: %w", err)
 			}
 			passwordDerived := pbkdf2.Key([]byte(password[i]), keyslot.KeySlotSalt(), int(keyslot.Iterations()), int(h.KeyBytes()), hasher)
 			striped, err := v1encrypt(h.CipherName(), h.CipherMode(), 0, passwordDerived, splitKey, V1SectorSize, false)
 			if err != nil {
-				return nil, nil, fmt.Errorf("encrypting split key with password: %w", err)
+				return nil, nil, -1, fmt.Errorf("encrypting split key with password: %w", err)
 			}
 			if len(striped) != len(mkey)*int(keyslot.Stripes()) {
-				return nil, nil, fmt.Errorf("internal error: got %d stripe bytes, expected %d", len(striped), len(mkey)*int(keyslot.Stripes()))
+				return nil, nil, -1, fmt.Errorf("internal error: got %d stripe bytes, expected %d", len(striped), len(mkey)*int(keyslot.Stripes()))
 			}
 			stripes = append(stripes, striped)
 		}
@@ -127,41 +128,42 @@ func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, 
 		ivTweak += len(plaintext) / V1SectorSize
 		return ciphertext, err
 	}
-	return head, encryptStream, nil
+	return head, encryptStream, V1SectorSize, nil
 }
 
 // EncryptV2 prepares to encrypt data using one or more passwords and the
 // specified cipher (or a default, if the specified cipher is "").
 //
-// Returns a fixed LUKSv2 header which contains keying information, and a
-// function which will encrypt blocks of data in succession.
-func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte, func([]byte) ([]byte, error), error) {
+// Returns a fixed LUKSv2 header which contains keying information, a
+// function which will encrypt blocks of data in succession, and the size of
+// chunks of data that it expects.
+func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte, func([]byte) ([]byte, error), int, error) {
 	if len(password) == 0 {
-		return nil, nil, errors.New("at least one password is required")
+		return nil, nil, -1, errors.New("at least one password is required")
 	}
 	if cipher == "" {
 		cipher = "aes-xts-plain64"
 	}
 	cipherSpec := strings.SplitN(cipher, "-", 3)
 	if len(cipherSpec) != 3 || len(cipherSpec[0]) == 0 || len(cipherSpec[1]) == 0 || len(cipherSpec[2]) == 0 {
-		return nil, nil, fmt.Errorf("invalid cipher %q", cipher)
+		return nil, nil, -1, fmt.Errorf("invalid cipher %q", cipher)
 	}
 	if payloadSectorSize == 0 {
 		payloadSectorSize = V2SectorSize
 	}
 	switch payloadSectorSize {
 	default:
-		return nil, nil, fmt.Errorf("invalid sector size %d", payloadSectorSize)
+		return nil, nil, -1, fmt.Errorf("invalid sector size %d", payloadSectorSize)
 	case 512, 1024, 2048, 4096:
 	}
 
 	headerSalts := make([]byte, v1SaltSize*3)
 	n, err := rand.Read(headerSalts)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, -1, err
 	}
 	if n != len(headerSalts) {
-		return nil, nil, errors.New("short read")
+		return nil, nil, -1, errors.New("short read")
 	}
 	hSalt1 := headerSalts[:v1SaltSize]
 	hSalt2 := headerSalts[v1SaltSize : v1SaltSize*2]
@@ -218,16 +220,16 @@ func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte,
 	}
 	n, err = rand.Read(mkey)
 	if err != nil {
-		return nil, nil, fmt.Errorf("reading random data: %w", err)
+		return nil, nil, -1, fmt.Errorf("reading random data: %w", err)
 	}
 	if n != len(mkey) {
-		return nil, nil, errors.New("short read")
+		return nil, nil, -1, errors.New("short read")
 	}
 
 	tuningSalt := make([]byte, v1SaltSize)
 	hasher, err := hasherByName(h1.ChecksumAlgorithm())
 	if err != nil {
-		return nil, nil, errors.New("internal error")
+		return nil, nil, -1, errors.New("internal error")
 	}
 	iterations := IterationsPBKDF2(tuningSalt, len(mkey), hasher)
 	timeCost := 1
@@ -253,19 +255,19 @@ func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte,
 		keyslotSalt := make([]byte, v1SaltSize)
 		n, err := rand.Read(keyslotSalt)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, -1, err
 		}
 		if n != len(keyslotSalt) {
-			return nil, nil, errors.New("short read")
+			return nil, nil, -1, errors.New("short read")
 		}
 		key := argon2.Key([]byte(password[i]), keyslotSalt, uint32(timeCost), uint32(memoryCost), uint8(threadsCost), uint32(len(mkey)))
 		split, err := afSplit(mkey, hasher(), V2Stripes)
 		if err != nil {
-			return nil, nil, fmt.Errorf("splitting: %w", err)
+			return nil, nil, -1, fmt.Errorf("splitting: %w", err)
 		}
 		striped, err := v2encrypt(cipher, 0, key, split, V1SectorSize, false)
 		if err != nil {
-			return nil, nil, fmt.Errorf("encrypting: %w", err)
+			return nil, nil, -1, fmt.Errorf("encrypting: %w", err)
 		}
 		stripes = append(stripes, striped)
 		keyslot := V2JSONKeyslot{
@@ -328,11 +330,11 @@ rebuild:
 	j.Segments["0"] = segment0
 	encodedJSON, err := json.Marshal(j)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, -1, err
 	}
 	headerPlusPaddedJsonSize, err := roundHeaderSize(int(V2SectorSize) /* binary header */ + len(encodedJSON) + 1)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, -1, err
 	}
 	if j.Config.JsonSize != headerPlusPaddedJsonSize-V2SectorSize {
 		j.Config.JsonSize = headerPlusPaddedJsonSize - V2SectorSize
@@ -402,5 +404,5 @@ rebuild:
 		ivTweak += len(plaintext) / payloadSectorSize
 		return ciphertext, err
 	}
-	return head, encryptStream, nil
+	return head, encryptStream, segment0.SectorSize, nil
 }
