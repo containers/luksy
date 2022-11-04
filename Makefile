@@ -9,6 +9,6 @@ lukstool: cmd/lukstool/*.go *.go
 clean:
 	$(RM) lukstool lukstool.test
 
-check:
+test:
 	$(GO) test
 	$(BATS) ./tests
