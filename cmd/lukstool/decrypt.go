@@ -17,6 +17,7 @@ import (
 var (
 	decryptPasswordFd   = -1
 	decryptPasswordFile = ""
+	decryptForce        = false
 )
 
 func init() {
@@ -34,10 +35,20 @@ func init() {
 	flags.SetInterspersed(false)
 	flags.IntVar(&decryptPasswordFd, "password-fd", -1, "read password from file descriptor")
 	flags.StringVar(&decryptPasswordFile, "password-file", "", "read password from file")
+	flags.BoolVarP(&decryptForce, "force-overwrite", "f", false, "forcibly overwrite existing output files")
 	rootCmd.AddCommand(decryptCommand)
 }
 
 func decryptCmd(cmd *cobra.Command, args []string) error {
+	if len(args) >= 2 {
+		_, err := os.Stat(args[1])
+		if (err == nil || !os.IsNotExist(err)) && !decryptForce {
+			if err != nil {
+				return fmt.Errorf("checking if %q exists: %w", args[1], err)
+			}
+			return fmt.Errorf("-f not specified, and %q exists", args[1])
+		}
+	}
 	input, err := os.Open(args[0])
 	if err != nil {
 		return err

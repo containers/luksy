@@ -19,6 +19,7 @@ var (
 	encryptSectorSize    = 0
 	encryptCipher        = ""
 	encryptv1            = false
+	encryptForce         = false
 )
 
 func init() {
@@ -39,10 +40,18 @@ func init() {
 	flags.BoolVarP(&encryptv1, "luks1", "1", false, "create LUKSv1 instead of LUKSv2")
 	flags.IntVar(&encryptSectorSize, "sector-size", 0, "sector size for LUKSv2")
 	flags.StringVarP(&encryptCipher, "cipher", "c", "", "encryption algorithm")
+	flags.BoolVarP(&encryptForce, "force-overwrite", "f", false, "forcibly overwrite existing output files")
 	rootCmd.AddCommand(encryptCommand)
 }
 
 func encryptCmd(cmd *cobra.Command, args []string) error {
+	_, err := os.Stat(args[1])
+	if (err == nil || !os.IsNotExist(err)) && !encryptForce {
+		if err != nil {
+			return fmt.Errorf("checking if %q exists: %w", args[1], err)
+		}
+		return fmt.Errorf("-f not specified, and %q exists", args[1])
+	}
 	input, err := os.Open(args[0])
 	if err != nil {
 		return fmt.Errorf("open %q: %w", args[0], err)
