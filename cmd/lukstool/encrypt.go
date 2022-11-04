@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/nalind/lukstool"
 	"github.com/spf13/cobra"
@@ -87,6 +88,9 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 			}
 			passwords = append(passwords, string(passBytes))
 		}
+	}
+	for i := range passwords {
+		passwords[i] = strings.TrimRightFunc(passwords[i], func(r rune) bool { return r == '\r' || r == '\n' })
 	}
 	var header []byte
 	var encryptStream func([]byte) ([]byte, error)

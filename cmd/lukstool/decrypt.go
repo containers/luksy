@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/nalind/lukstool"
 	"github.com/spf13/cobra"
@@ -81,6 +82,7 @@ func decryptCmd(cmd *cobra.Command, args []string) error {
 			password = string(passBytes)
 		}
 	}
+	password = strings.TrimRightFunc(password, func(r rune) bool { return r == '\r' || r == '\n' })
 	var decryptStream func([]byte) ([]byte, error)
 	var payloadOffset, payloadSize int64
 	var decryptSectorSize int
