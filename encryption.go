@@ -500,7 +500,7 @@ func (w *wrapper) Read(buf []byte) (int, error) {
 }
 
 func (w *wrapper) Close() error {
-	if w.writer != nil && w.buffered != 0 {
+	if w.writer != nil {
 		if w.buffered%w.blockSize != 0 {
 			w.buffered += copy(w.buf[w.buffered:], make([]byte, roundUpToMultiple(w.buffered%w.blockSize, w.blockSize)))
 		}
