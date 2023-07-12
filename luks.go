@@ -8,8 +8,7 @@ import (
 )
 
 // ReadHeaderOptions can control some of what ReadHeaders() does.
-type ReadHeaderOptions struct {
-}
+type ReadHeaderOptions struct{}
 
 // ReadHeaders reads LUKS headers from the specified file, returning either a
 // LUKSv1 header, or two LUKSv2 headers and a LUKSv2 JSON block, depending on

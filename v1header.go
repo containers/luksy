@@ -6,8 +6,10 @@ import (
 	"syscall"
 )
 
-type V1Header [592]uint8
-type V1KeySlot [48]uint8
+type (
+	V1Header  [592]uint8
+	V1KeySlot [48]uint8
+)
 
 const (
 	// Mostly verbatim from LUKS1 On-Disk Format Specification version 1.2.3
