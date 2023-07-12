@@ -523,14 +523,14 @@ func (w *wrapper) Close() error {
 // EncryptWriter creates an io.WriteCloser which buffers writes through an
 // encryption function.  After writing a final block, the writer should be
 // closed.
-func EncryptWriter(fn func(plaintext []byte) ([]byte, error), writer io.WriteCloser, blockSize int) *wrapper {
+func EncryptWriter(fn func(plaintext []byte) ([]byte, error), writer io.WriteCloser, blockSize int) io.WriteCloser {
 	bufferSize := roundUpToMultiple(1024*1024, blockSize)
 	return &wrapper{fn: fn, blockSize: blockSize, buf: make([]byte, bufferSize), writer: writer}
 }
 
 // DecryptReader creates an io.Reader which buffers reads through a decryption
 // function.
-func DecryptReader(fn func(ciphertext []byte) ([]byte, error), reader io.Reader, blockSize int) *wrapper {
+func DecryptReader(fn func(ciphertext []byte) ([]byte, error), reader io.Reader, blockSize int) io.Reader {
 	bufferSize := roundUpToMultiple(1024*1024, blockSize)
 	return &wrapper{fn: fn, blockSize: blockSize, buf: make([]byte, bufferSize), consumed: bufferSize, reader: reader}
 }
