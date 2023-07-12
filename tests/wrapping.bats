@@ -6,7 +6,7 @@ uuid=
 
 teardown() {
     if test -n "$uuid" ; then
-        cryptsetup close "$uuid"
+        cryptsetup close decrypted
         uuid=
     fi
 }
@@ -21,9 +21,9 @@ function wrapping() {
             echo error reading UUID
             false
         fi
-        echo -n "${password}" | cryptsetup -q --key-file - luksOpen ${BATS_TEST_TMPDIR}/encrypted ${uuid}
-        cmp /dev/mapper/${uuid} ${BATS_TEST_TMPDIR}/plaintext
-        cryptsetup close ${uuid}
+        echo -n "${password}" | cryptsetup -q --key-file - luksOpen ${BATS_TEST_TMPDIR}/encrypted decrypted
+        cmp /dev/mapper/decrypted ${BATS_TEST_TMPDIR}/plaintext
+        cryptsetup close decrypted
         uuid=
         rm -f ${BATS_TEST_TMPDIR}/encrypted
         echo password: "${password}" ok
@@ -106,9 +106,9 @@ function wrapping_cryptsetup() {
             echo error reading UUID
             false
         fi
-        echo -n "${password}" | cryptsetup luksOpen -q --key-file - ${BATS_TEST_TMPDIR}/encrypted ${uuid}
-        cmp /dev/mapper/${uuid} ${BATS_TEST_TMPDIR}/plaintext
-        cryptsetup close ${uuid}
+        echo -n "${password}" | cryptsetup luksOpen -q --key-file - ${BATS_TEST_TMPDIR}/encrypted decrypted
+        cmp /dev/mapper/decrypted ${BATS_TEST_TMPDIR}/plaintext
+        cryptsetup close decrypted
         uuid=
         rm -f ${BATS_TEST_TMPDIR}/encrypted
         rm -f ${BATS_TEST_TMPDIR}/plaintext
