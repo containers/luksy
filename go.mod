@@ -1,6 +1,6 @@
 module github.com/nalind/lukstool
 
-go 1.18
+go 1.20
 
 require (
 	github.com/aead/serpent v0.0.0-20160714141033-fba169763ea6
