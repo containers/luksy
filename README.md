@@ -1,4 +1,4 @@
-lukstool: offline encryption/decryption using LUKS formats
+lukstool: offline encryption/decryption using LUKS formats ![Cirrus CI Status](https://img.shields.io/cirrus/github/nalind/lukstool/main)
 -
 lukstool implements encryption and decryption using LUKSv1 and LUKSv2 formats.
 Think of it as a clunkier cousin of gzip/bzip2/xz that doesn't actually produce
