@@ -115,7 +115,9 @@ func decryptCmd(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		reader := io.Reader(lukstool.DecryptReader(decryptStream, input, decryptSectorSize))
+		rc := lukstool.DecryptReader(decryptStream, input, decryptSectorSize)
+		defer rc.Close()
+		reader := io.Reader(rc)
 		if payloadSize >= 0 {
 			reader = io.LimitReader(reader, payloadSize)
 		}
