@@ -3,14 +3,13 @@ package main
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/nalind/lukstool"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/sys/unix"
+	"golang.org/x/term"
 )
 
 var (
@@ -74,17 +73,17 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 		passwords = append(passwords, string(passBytes))
 	}
 	for _, encryptPasswordFile := range encryptPasswordFiles {
-		passBytes, err := ioutil.ReadFile(encryptPasswordFile)
+		passBytes, err := os.ReadFile(encryptPasswordFile)
 		if err != nil {
 			return err
 		}
 		passwords = append(passwords, string(passBytes))
 	}
 	if len(passwords) == 0 {
-		if terminal.IsTerminal(unix.Stdin) {
+		if term.IsTerminal(unix.Stdin) {
 			fmt.Fprintf(os.Stdout, "Password: ")
 			os.Stdout.Sync()
-			passBytes, err := terminal.ReadPassword(unix.Stdin)
+			passBytes, err := term.ReadPassword(unix.Stdin)
 			if err != nil {
 				return fmt.Errorf("reading from stdin: %w", err)
 			}

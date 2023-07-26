@@ -4,14 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/nalind/lukstool"
 	"github.com/spf13/cobra"
-	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/sys/unix"
+	"golang.org/x/term"
 )
 
 var (
@@ -59,7 +58,7 @@ func decryptCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if v2header != nil && v2header2 != nil && v2header2.SequenceID() > v2header.SequenceID() {
-		v2header, v2header2 = v2header2, v2header
+		v2header = v2header2
 	}
 	var password string
 	if decryptPasswordFd != -1 {
@@ -70,16 +69,16 @@ func decryptCmd(cmd *cobra.Command, args []string) error {
 		}
 		password = string(passBytes)
 	} else if decryptPasswordFile != "" {
-		passBytes, err := ioutil.ReadFile(decryptPasswordFile)
+		passBytes, err := os.ReadFile(decryptPasswordFile)
 		if err != nil {
 			return err
 		}
 		password = string(passBytes)
 	} else {
-		if terminal.IsTerminal(unix.Stdin) {
+		if term.IsTerminal(unix.Stdin) {
 			fmt.Fprintf(os.Stdout, "Password: ")
 			os.Stdout.Sync()
-			passBytes, err := terminal.ReadPassword(unix.Stdin)
+			passBytes, err := term.ReadPassword(unix.Stdin)
 			if err != nil {
 				return fmt.Errorf("reading from stdin: %w", err)
 			}
@@ -106,12 +105,13 @@ func decryptCmd(cmd *cobra.Command, args []string) error {
 		err = errors.New("internal error: unknown format")
 	}
 	if err == nil && len(args) >= 2 {
-		output, err := os.Create(args[1])
+		var output *os.File
+		output, err = os.Create(args[1])
 		if err != nil {
 			return err
 		}
 		defer output.Close()
-		_, err = input.Seek(payloadOffset, os.SEEK_SET)
+		_, err = input.Seek(payloadOffset, io.SeekStart)
 		if err != nil {
 			return err
 		}

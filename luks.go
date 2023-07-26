@@ -43,7 +43,10 @@ func ReadHeaders(f *os.File, options ReadHeaderOptions) (*V1Header, *V2Header, *
 		if size < 4096 {
 			return nil, nil, nil, nil, fmt.Errorf("unsupported header size while looking for JSON data")
 		}
-		if n, err = f.ReadAt(v2b[:], int64(size)); err != nil {
+		if n, err = f.ReadAt(v2b[:], int64(size)); err != nil || int64(n) != int64(size) {
+			if err == nil && int64(n) != int64(size) {
+				err = fmt.Errorf("short read: read only %d bytes, should have read %d", n, size)
+			}
 			return nil, nil, nil, nil, err
 		}
 		if v2b.Magic() != V2Magic2 {

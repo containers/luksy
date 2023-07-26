@@ -45,27 +45,6 @@ const (
 	V2SectorSize    = 4096
 )
 
-var (
-	v2CipherNames = map[string]bool{
-		"aes-xts-plain64":      true,
-		"aes-cbc:essiv:sha256": false,
-		"serpent-xts-plain64":  false,
-		"twofish-xts-plain64":  false,
-		"aegis128-random":      false,
-	}
-	v2HashSpecs = map[string]bool{
-		"sha1":      true,
-		"sha256":    true,
-		"sha512":    false,
-		"ripemd160": false,
-	}
-	v2KDFNames = map[string]bool{
-		"pbkdf2":   true,
-		"argon2i":  true,
-		"argon2id": true,
-	}
-)
-
 func (h V2Header) Magic() string {
 	return string(h[v2MagicStart : v2MagicStart+v2MagicLength])
 }

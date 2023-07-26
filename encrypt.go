@@ -45,8 +45,12 @@ func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, 
 	}
 
 	var h V1Header
-	h.SetMagic(V1Magic)
-	h.SetVersion(1)
+	if err := h.SetMagic(V1Magic); err != nil {
+		return nil, nil, -1, fmt.Errorf("setting magic to v1: %w", err)
+	}
+	if err := h.SetVersion(1); err != nil {
+		return nil, nil, -1, fmt.Errorf("setting version to 1: %w", err)
+	}
 	h.SetCipherName(cipherSpec[0])
 	h.SetCipherMode(cipherSpec[1] + "-" + cipherSpec[2])
 	h.SetHashSpec("sha256")
@@ -108,7 +112,9 @@ func EncryptV1(password []string, cipher string) ([]byte, func([]byte) ([]byte, 
 			stripes = append(stripes, striped)
 		}
 		keyslot.SetKeyMaterialOffset(uint32(headerLength / V1SectorSize))
-		h.SetKeySlot(i, keyslot)
+		if err := h.SetKeySlot(i, keyslot); err != nil {
+			return nil, nil, -1, fmt.Errorf("internal error: setting value for key slot %d: %w", i, err)
+		}
 		headerLength += len(mkey) * int(keyslot.Stripes())
 		headerLength = roundUpToMultiple(headerLength, V1AlignKeyslots)
 	}
@@ -194,10 +200,18 @@ func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte,
 	}
 
 	var h1, h2 V2Header
-	h1.SetMagic(V2Magic1)
-	h2.SetMagic(V2Magic2)
-	h1.SetVersion(2)
-	h2.SetVersion(2)
+	if err := h1.SetMagic(V2Magic1); err != nil {
+		return nil, nil, -1, fmt.Errorf("setting magic to v2: %w", err)
+	}
+	if err := h2.SetMagic(V2Magic2); err != nil {
+		return nil, nil, -1, fmt.Errorf("setting magic to v2: %w", err)
+	}
+	if err := h1.SetVersion(2); err != nil {
+		return nil, nil, -1, fmt.Errorf("setting version to 2: %w", err)
+	}
+	if err := h2.SetVersion(2); err != nil {
+		return nil, nil, -1, fmt.Errorf("setting version to 2: %w", err)
+	}
 	h1.SetSequenceID(1)
 	h2.SetSequenceID(1)
 	h1.SetLabel("")
@@ -317,8 +331,7 @@ func EncryptV2(password []string, cipher string, payloadSectorSize int) ([]byte,
 		},
 	}
 
-	var j V2JSON
-	j = V2JSON{
+	j := V2JSON{
 		Config:   V2JSONConfig{},
 		Keyslots: map[string]V2JSONKeyslot{},
 		Digests:  map[string]V2JSONDigest{},

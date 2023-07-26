@@ -76,31 +76,6 @@ const (
 	V1SectorSize               = 512
 )
 
-var (
-	v1CipherNames = map[string]struct{}{
-		"aes":     {},
-		"twofish": {},
-		"serpent": {},
-		"cast5":   {},
-		"cast6":   {},
-	}
-	v1Modes = map[string]struct{}{
-		"ecb":                 {},
-		"cbc-plain":           {},
-		"cbc-essiv:sha1":      {},
-		"cbc-essiv:sha256":    {},
-		"cbc-essiv:sha512":    {},
-		"cbc-essiv:ripemd160": {},
-		"xts-plain64":         {},
-	}
-	v1HashSpecs = map[string]struct{}{
-		"sha1":      {},
-		"sha256":    {},
-		"sha512":    {},
-		"ripemd160": {},
-	}
-)
-
 func (h V1Header) readu2(offset int) uint16 {
 	return binary.BigEndian.Uint16(h[offset:])
 }
