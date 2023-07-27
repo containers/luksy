@@ -1,4 +1,4 @@
-module github.com/nalind/lukstool
+module github.com/containers/lukstool
 
 go 1.20
 

@@ -5,7 +5,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/nalind/lukstool"
+	"github.com/containers/lukstool"
 	"github.com/spf13/cobra"
 )
 
