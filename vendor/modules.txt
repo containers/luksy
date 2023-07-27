@@ -34,7 +34,6 @@ golang.org/x/crypto/cast5
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/ripemd160
-golang.org/x/crypto/ssh/terminal
 golang.org/x/crypto/twofish
 golang.org/x/crypto/xts
 # golang.org/x/sys v0.10.0
