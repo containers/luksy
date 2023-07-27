@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/nalind/lukstool"
+	"github.com/containers/lukstool"
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
 	"golang.org/x/term"
