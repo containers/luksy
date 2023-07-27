@@ -8,7 +8,6 @@ import (
 
 	"github.com/containers/lukstool"
 	"github.com/spf13/cobra"
-	"golang.org/x/sys/unix"
 	"golang.org/x/term"
 )
 
@@ -80,10 +79,10 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 		passwords = append(passwords, string(passBytes))
 	}
 	if len(passwords) == 0 {
-		if term.IsTerminal(unix.Stdin) {
+		if term.IsTerminal(int(os.Stdin.Fd())) {
 			fmt.Fprintf(os.Stdout, "Password: ")
 			os.Stdout.Sync()
-			passBytes, err := term.ReadPassword(unix.Stdin)
+			passBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
 			if err != nil {
 				return fmt.Errorf("reading from stdin: %w", err)
 			}
