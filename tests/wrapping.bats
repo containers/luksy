@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-lukstool=${LUKSTOOL:-${BATS_TEST_DIRNAME}/../lukstool}
+luksy=${LUKSY:-${BATS_TEST_DIRNAME}/../luksy}
 
 uuid=
 
@@ -15,7 +15,7 @@ function wrapping() {
     dd if=/dev/urandom bs=1M count=64 of=${BATS_TEST_TMPDIR}/plaintext status=none
     for password in short morethaneight morethansixteenchars ; do
         echo testing password: "${password}"
-        echo -n "${password}" | ${lukstool} encrypt --password-fd 0 "$@" ${BATS_TEST_TMPDIR}/plaintext ${BATS_TEST_TMPDIR}/encrypted
+        echo -n "${password}" | ${luksy} encrypt --password-fd 0 "$@" ${BATS_TEST_TMPDIR}/plaintext ${BATS_TEST_TMPDIR}/encrypted
         uuid=$(cryptsetup luksUUID ${BATS_TEST_TMPDIR}/encrypted)
         if test -z "$uuid"; then
             echo error reading UUID
@@ -100,7 +100,7 @@ function wrapping_cryptsetup() {
         echo testing password: "${password}"
         dd if=/dev/urandom bs=1M count=1024 of=${BATS_TEST_TMPDIR}/encrypted
         echo -n "${password}" | cryptsetup luksFormat -q "$@" ${BATS_TEST_TMPDIR}/encrypted -
-        echo -n "${password}" | ${lukstool} decrypt --password-fd 0 ${BATS_TEST_TMPDIR}/encrypted ${BATS_TEST_TMPDIR}/plaintext
+        echo -n "${password}" | ${luksy} decrypt --password-fd 0 ${BATS_TEST_TMPDIR}/encrypted ${BATS_TEST_TMPDIR}/plaintext
         uuid=$(cryptsetup luksUUID ${BATS_TEST_TMPDIR}/encrypted)
         if test -z "$uuid"; then
             echo error reading UUID

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/containers/lukstool"
+	"github.com/containers/luksy"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -28,7 +28,7 @@ func init() {
 			return encryptCmd(cmd, args)
 		},
 		Args:    cobra.ExactArgs(2),
-		Example: `lukstool encrypt /tmp/plaintext.img /tmp/encrypted.img`,
+		Example: `luksy - encrypt /tmp/plaintext.img /tmp/encrypted.img`,
 	}
 
 	flags := encryptCommand.Flags()
@@ -59,8 +59,8 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if st.Size()%lukstool.V1SectorSize != 0 {
-		return fmt.Errorf("%q is not of a suitable size, expected a multiple of %d bytes", input.Name(), lukstool.V1SectorSize)
+	if st.Size()%luksy.V1SectorSize != 0 {
+		return fmt.Errorf("%q is not of a suitable size, expected a multiple of %d bytes", input.Name(), luksy.V1SectorSize)
 	}
 	var passwords []string
 	for _, encryptPasswordFd := range encryptPasswordFds {
@@ -102,12 +102,12 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 	var header []byte
 	var encryptStream func([]byte) ([]byte, error)
 	if encryptv1 {
-		header, encryptStream, encryptSectorSize, err = lukstool.EncryptV1(passwords, encryptCipher)
+		header, encryptStream, encryptSectorSize, err = luksy.EncryptV1(passwords, encryptCipher)
 		if err != nil {
 			return fmt.Errorf("creating luksv1 data: %w", err)
 		}
 	} else {
-		header, encryptStream, encryptSectorSize, err = lukstool.EncryptV2(passwords, encryptCipher, encryptSectorSize)
+		header, encryptStream, encryptSectorSize, err = luksy.EncryptV2(passwords, encryptCipher, encryptSectorSize)
 		if err != nil {
 			return fmt.Errorf("creating luksv2 data: %w", err)
 		}
@@ -124,7 +124,7 @@ func encryptCmd(cmd *cobra.Command, args []string) error {
 	if n != len(header) {
 		return fmt.Errorf("short write while writing header to %q", output.Name())
 	}
-	wc := lukstool.EncryptWriter(encryptStream, output, encryptSectorSize)
+	wc := luksy.EncryptWriter(encryptStream, output, encryptSectorSize)
 	defer wc.Close()
 	_, err = io.Copy(wc, input)
 	return err

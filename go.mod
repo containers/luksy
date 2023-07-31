@@ -1,4 +1,4 @@
-module github.com/containers/lukstool
+module github.com/containers/luksy
 
 go 1.20
 

@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/containers/lukstool"
+	"github.com/containers/luksy"
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
@@ -26,7 +26,7 @@ func init() {
 			return decryptCmd(cmd, args)
 		},
 		Args:    cobra.RangeArgs(1, 2),
-		Example: `lukstool decrypt /dev/mapper/encrypted-lv [plaintext.img]`,
+		Example: `luksy decrypt /dev/mapper/encrypted-lv [plaintext.img]`,
 	}
 
 	flags := decryptCommand.Flags()
@@ -52,7 +52,7 @@ func decryptCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	defer input.Close()
-	v1header, v2header, v2header2, v2json, err := lukstool.ReadHeaders(input, lukstool.ReadHeaderOptions{})
+	v1header, v2header, v2header2, v2json, err := luksy.ReadHeaders(input, luksy.ReadHeaderOptions{})
 	if err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func decryptCmd(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		rc := lukstool.DecryptReader(decryptStream, input, decryptSectorSize)
+		rc := luksy.DecryptReader(decryptStream, input, decryptSectorSize)
 		defer rc.Close()
 		reader := io.Reader(rc)
 		if payloadSize >= 0 {

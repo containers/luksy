@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-lukstool=${LUKSTOOL:-${BATS_TEST_DIRNAME}/../lukstool}
+luksy=${LUKSY:-${BATS_TEST_DIRNAME}/../luksy}
 
 function multiple_passwords() {
     dd if=/dev/urandom bs=1M count=64 of=${BATS_TEST_TMPDIR}/plaintext status=none
@@ -8,7 +8,7 @@ function multiple_passwords() {
     echo -n short > ${BATS_TEST_TMPDIR}/short
     echo -n morethaneight > ${BATS_TEST_TMPDIR}/morethaneight
     echo -n morethansixteenchars > ${BATS_TEST_TMPDIR}/morethansixteenchars
-    ${lukstool} encrypt --password-file ${BATS_TEST_TMPDIR}/short --password-file ${BATS_TEST_TMPDIR}/morethaneight --password-file ${BATS_TEST_TMPDIR}/morethansixteenchars "$@" ${BATS_TEST_TMPDIR}/plaintext ${BATS_TEST_TMPDIR}/encrypted
+    ${luksy} encrypt --password-file ${BATS_TEST_TMPDIR}/short --password-file ${BATS_TEST_TMPDIR}/morethaneight --password-file ${BATS_TEST_TMPDIR}/morethansixteenchars "$@" ${BATS_TEST_TMPDIR}/plaintext ${BATS_TEST_TMPDIR}/encrypted
     for password in short morethaneight morethansixteenchars ; do
         echo testing password: "${password}"
         echo -n "${password}" | cryptsetup -q --test-passphrase --key-file - luksOpen ${BATS_TEST_TMPDIR}/encrypted
@@ -30,7 +30,7 @@ function passwords() {
     dd if=/dev/urandom bs=1M count=64 of=${BATS_TEST_TMPDIR}/plaintext status=none
     for password in short morethaneight morethansixteenchars ; do
         echo testing password: "${password}"
-        echo -n "${password}" | ${lukstool} encrypt --password-fd 0 "$@" ${BATS_TEST_TMPDIR}/plaintext ${BATS_TEST_TMPDIR}/encrypted
+        echo -n "${password}" | ${luksy} encrypt --password-fd 0 "$@" ${BATS_TEST_TMPDIR}/plaintext ${BATS_TEST_TMPDIR}/encrypted
         echo -n "${password}" | cryptsetup -q --test-passphrase --key-file - luksOpen ${BATS_TEST_TMPDIR}/encrypted
         echo password: "${password}" ok
         rm -f ${BATS_TEST_TMPDIR}/encrypted
@@ -145,7 +145,7 @@ function multiple_passwords_cryptsetup() {
     echo -n short | cryptsetup luksAddKey ${BATS_TEST_TMPDIR}/encrypted ${BATS_TEST_TMPDIR}/new-key
     for password in short morethaneight morethansixteenchars; do
         echo testing password: "${password}"
-        echo -n "${password}" | ${lukstool} decrypt --password-fd 0 ${BATS_TEST_TMPDIR}/encrypted
+        echo -n "${password}" | ${luksy} decrypt --password-fd 0 ${BATS_TEST_TMPDIR}/encrypted
         echo password: "${password}" ok
     done
     rm -f ${BATS_TEST_TMPDIR}/encrypted
@@ -166,7 +166,7 @@ function passwords_cryptsetup() {
         echo testing password: "${password}"
         fallocate -l 1G ${BATS_TEST_TMPDIR}/encrypted
         echo -n "${password}" | cryptsetup luksFormat -q "$@" ${BATS_TEST_TMPDIR}/encrypted -
-        echo -n "${password}" | ${lukstool} decrypt --password-fd 0 ${BATS_TEST_TMPDIR}/encrypted
+        echo -n "${password}" | ${luksy} decrypt --password-fd 0 ${BATS_TEST_TMPDIR}/encrypted
         rm -f ${BATS_TEST_TMPDIR}/encrypted
         echo password: "${password}" ok
     done

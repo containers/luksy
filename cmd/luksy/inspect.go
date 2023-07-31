@@ -5,7 +5,7 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/containers/lukstool"
+	"github.com/containers/luksy"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +19,7 @@ func init() {
 			return inspectCmd(cmd, args)
 		},
 		Args:    cobra.ExactArgs(1),
-		Example: `lukstool inspect /dev/mapper/encrypted-lv`,
+		Example: `luksy - inspect /dev/mapper/encrypted-lv`,
 	}
 
 	flags := inspectCommand.Flags()
@@ -34,7 +34,7 @@ func inspectCmd(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	defer f.Close()
-	v1header, v2header, _, v2json, err := lukstool.ReadHeaders(f, lukstool.ReadHeaderOptions{})
+	v1header, v2header, _, v2json, err := luksy.ReadHeaders(f, luksy.ReadHeaderOptions{})
 	if err != nil {
 		return err
 	}

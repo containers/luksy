@@ -1,4 +1,4 @@
-package lukstool
+package luksy
 
 import (
 	"crypto/rand"

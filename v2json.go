@@ -1,4 +1,4 @@
-package lukstool
+package luksy
 
 type V2JSON struct {
 	Config   V2JSONConfig             `json:"config"`

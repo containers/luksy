@@ -1,13 +1,13 @@
 GO = go
 BATS = bats
 
-all: lukstool
+all: luksy
 
-lukstool: cmd/lukstool/*.go *.go
-	$(GO) build -o lukstool ./cmd/lukstool
+luksy: cmd/luksy/*.go *.go
+	$(GO) build -o luksy ./cmd/luksy
 
 clean:
-	$(RM) lukstool lukstool.test
+	$(RM) luksy luksy.test
 
 test:
 	$(GO) test
