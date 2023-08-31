@@ -10,5 +10,5 @@ clean:
 	$(RM) luksy luksy.test
 
 test:
-	$(GO) test
+	$(GO) test -timeout 45m -v -cover
 	$(BATS) ./tests

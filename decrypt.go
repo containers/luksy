@@ -25,9 +25,10 @@ type ReaderAtSeekCloser interface {
 //
 // Returns a function which will decrypt payload blocks in succession, the size
 // of chunks of data that the function expects, the offset in the file where
-// the payload begins, and the size of the payload.
+// the payload begins, and the size of the payload, assuming the payload runs
+// to the end of the file.
 func (h V1Header) Decrypt(password string, f ReaderAtSeekCloser) (func([]byte) ([]byte, error), int, int64, int64, error) {
-	size, err := f.Seek(0, os.SEEK_END)
+	size, err := f.Seek(0, io.SeekEnd)
 	if err != nil {
 		return nil, -1, -1, -1, err
 	}
@@ -93,7 +94,8 @@ func (h V1Header) Decrypt(password string, f ReaderAtSeekCloser) (func([]byte) (
 //
 // Returns a function which will decrypt payload blocks in succession, the size
 // of chunks of data that the function expects, the offset in the file where
-// the payload begins, and the size of the payload.
+// the payload begins, and the size of the payload, assuming the payload runs
+// to the end of the file.
 func (h V2Header) Decrypt(password string, f ReaderAtSeekCloser, j V2JSON) (func([]byte) ([]byte, error), int, int64, int64, error) {
 	foundDigests := 0
 	for d, digest := range j.Digests {
@@ -126,7 +128,7 @@ func (h V2Header) Decrypt(password string, f ReaderAtSeekCloser, j V2JSON) (func
 			}
 			payloadOffset = tmp
 			if segment.Size == "dynamic" {
-				size, err := f.Seek(0, os.SEEK_END)
+				size, err := f.Seek(0, io.SeekEnd)
 				if err != nil {
 					continue
 				}
