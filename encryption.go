@@ -417,7 +417,20 @@ func roundUpToMultiple(i, factor int) int {
 	if i < 0 {
 		return 0
 	}
+	if factor < 1 {
+		return i
+	}
 	return i + ((factor - (i % factor)) % factor)
+}
+
+func roundDownToMultiple(i, factor int) int {
+	if i < 0 {
+		return 0
+	}
+	if factor < 1 {
+		return i
+	}
+	return i - (i % factor)
 }
 
 func hasherByName(name string) (func() hash.Hash, error) {

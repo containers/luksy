@@ -133,10 +133,28 @@ func Test_roundUpToMultiple(t *testing.T) {
 		{1, 2048, 2048},
 		{2048, 2048, 2048},
 		{4095, 2048, 4096},
+		{4096, 2048, 4096},
 		{4097, 2048, 6144},
 	} {
-		t.Run(fmt.Sprintf("%d:%d", testCase.input, testCase.factor), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d~^~%d", testCase.input, testCase.factor), func(t *testing.T) {
 			assert.Equal(t, testCase.result, roundUpToMultiple(testCase.input, testCase.factor))
+		})
+	}
+}
+
+func Test_roundDownToMultiple(t *testing.T) {
+	type testCases struct {
+		input, factor, result int
+	}
+	for _, testCase := range []testCases{
+		{1, 2048, 0},
+		{2048, 2048, 2048},
+		{4095, 2048, 2048},
+		{4096, 2048, 4096},
+		{4097, 2048, 4096},
+	} {
+		t.Run(fmt.Sprintf("%d~v~%d", testCase.input, testCase.factor), func(t *testing.T) {
+			assert.Equal(t, testCase.result, roundDownToMultiple(testCase.input, testCase.factor))
 		})
 	}
 }
