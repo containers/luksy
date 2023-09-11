@@ -4,6 +4,7 @@ docker_builder:
         HOME: /root
         DEBIAN_FRONTEND: noninteractive
         CIRRUS_LOG_TIMESTAMP: true
+        GOMEMLIMIT: "1GiB"
     setup_script: |
         apt-get -q update
         apt-get -q install -y bats cryptsetup golang
