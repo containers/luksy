@@ -11,7 +11,11 @@ docker_builder:
         go version
         make
     unit_test_script:
-        go test -timeout 45m -v -cover
+        if ! go test -timeout 45m -v -cover ; then
+          echo '[dmesg]';
+          dmesg;
+          exit 1;
+        fi
     defaults_script: |
         bats -f defaults ./tests
     aes_script: |
