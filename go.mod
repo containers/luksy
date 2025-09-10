@@ -2,8 +2,6 @@ module github.com/containers/luksy
 
 go 1.24.0
 
-toolchain go1.24.1
-
 require (
 	github.com/aead/serpent v0.0.0-20160714141033-fba169763ea6
 	github.com/google/uuid v1.6.0
