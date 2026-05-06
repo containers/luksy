@@ -1,4 +1,4 @@
-luksy: offline encryption/decryption using LUKS formats [![Cirrus CI Status](https://img.shields.io/cirrus/github/containers/luksy/main)](https://cirrus-ci.com/github/containers/luksy/main)
+luksy: offline encryption/decryption using LUKS formats [![CI Status](https://img.shields.io/github/actions/workflow/status/containers/luksy/ci.yml?branch=main)](https://github.com/containers/luksy/actions/workflows/ci.yml)
 -
 luksy implements encryption and decryption using LUKSv1 and LUKSv2 formats.
 Think of it as a clunkier cousin of gzip/bzip2/xz that doesn't actually produce
